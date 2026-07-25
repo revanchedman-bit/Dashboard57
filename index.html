@@ -696,6 +696,103 @@ body {
   .kpi-strip { padding-inline: 10px; }
 }
 
+  
+
+/* ===== EXPORT DETAIL REPORT KE PDF ===== */
+body.pdf-export-mode {
+  background: #fff !important;
+}
+body.pdf-export-mode .sidebar,
+body.pdf-export-mode .mobile-overlay,
+body.pdf-export-mode .menu-button,
+body.pdf-export-mode .topbar-actions,
+body.pdf-export-mode .source-banner,
+body.pdf-export-mode .footer,
+body.pdf-export-mode .toast {
+  display: none !important;
+}
+body.pdf-export-mode .main-content {
+  width: 1500px !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 18px !important;
+  background: #fff !important;
+}
+body.pdf-export-mode .topbar {
+  margin-bottom: 18px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #dfe5ed;
+}
+body.pdf-export-mode .title-group h1,
+body.pdf-export-mode .title-group p {
+  max-width: none !important;
+  overflow: visible !important;
+  white-space: normal !important;
+  text-overflow: clip !important;
+}
+body.pdf-export-mode .page-view {
+  display: block !important;
+  animation: none !important;
+  margin: 0 0 18px !important;
+  padding: 4px 0 14px !important;
+  break-after: page;
+  page-break-after: always;
+}
+body.pdf-export-mode .page-view:last-of-type {
+  break-after: auto;
+  page-break-after: auto;
+}
+body.pdf-export-mode .page-view::before {
+  display: block;
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  border-left: 5px solid #0969d9;
+  background: #eef5fd;
+  color: #062d56;
+  font-size: 20px;
+  font-weight: 850;
+  letter-spacing: .4px;
+}
+body.pdf-export-mode #page-overview::before { content: "OVERVIEW"; }
+body.pdf-export-mode #page-kpi::before { content: "KPI PERFORMANCE"; }
+body.pdf-export-mode #page-salesperson::before { content: "SALES PERSON"; }
+body.pdf-export-mode #page-department::before { content: "DEPARTMENT"; }
+body.pdf-export-mode #page-trend::before { content: "TREND ANALYSIS"; }
+body.pdf-export-mode .card {
+  box-shadow: none !important;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+body.pdf-export-mode .page-table,
+body.pdf-export-mode .salesperson-table-panel {
+  break-inside: auto !important;
+  page-break-inside: auto !important;
+}
+body.pdf-export-mode .page-table table {
+  break-inside: auto !important;
+  page-break-inside: auto !important;
+}
+body.pdf-export-mode .page-table tr {
+  break-inside: avoid !important;
+  page-break-inside: avoid !important;
+}
+body.pdf-export-mode .table-wrap {
+  overflow: visible !important;
+}
+body.pdf-export-mode .page-panel,
+body.pdf-export-mode .full-chart-panel {
+  min-height: auto !important;
+}
+body.pdf-export-mode .trend-chart {
+  height: 380px !important;
+}
+
+@media print {
+  body.pdf-export-mode .page-view {
+    display: block !important;
+  }
+}
+
   </style>
 </head>
 <body>
@@ -723,14 +820,8 @@ body {
         <a class="nav-item" href="#trend" data-section="trend">
           <span class="nav-icon">⌁</span><span>Trend Analysis</span>
         </a>
-        <button class="nav-item nav-button" id="detailReportButton" type="button">
-          <span class="nav-icon">▤</span><span>Detail Report</span>
-        </button>
-        <button class="nav-item nav-button" id="downloadButton" type="button">
-          <span class="nav-icon">⇩</span><span>Data Download</span>
-        </button>
-        <button class="nav-item nav-button" id="spreadsheetSettingsButton" type="button">
-          <span class="nav-icon">⚙</span><span>Pengaturan Spreadsheet</span>
+        <button class="nav-item nav-button" id="detailReportButton" type="button" title="Download seluruh dashboard dalam bentuk PDF" aria-label="Download seluruh dashboard dalam bentuk PDF">
+          <span class="nav-icon">⇩</span><span>Detail Report (PDF)</span>
         </button>
       </nav>
 
@@ -858,45 +949,8 @@ body {
     </main>
   </div>
 
-
-  <div id="spreadsheetModal" class="settings-modal" aria-hidden="true">
-    <button class="settings-backdrop" type="button" data-close-settings aria-label="Tutup pengaturan"></button>
-    <section class="settings-card" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
-      <div class="settings-header">
-        <div>
-          <h2 id="settingsTitle">Pengaturan Google Spreadsheet</h2>
-          <p>Tempel URL atau ID Spreadsheet, lalu simpan.</p>
-        </div>
-        <button id="closeSettingsButton" class="settings-close" type="button" aria-label="Tutup">×</button>
-      </div>
-
-      <form id="spreadsheetSettingsForm" class="settings-form">
-        <label class="settings-field settings-field-wide">
-          <span>URL atau ID Spreadsheet</span>
-          <input id="spreadsheetIdInput" type="text" autocomplete="off" placeholder="https://docs.google.com/spreadsheets/d/ID_SPREADSHEET/edit" />
-        </label>
-
-        <div class="settings-grid">
-          <label class="settings-field"><span>Tab ringkasan</span><input id="sheetSummaryInput" type="text" /></label>
-          <label class="settings-field"><span>Tab trend</span><input id="sheetTrendInput" type="text" /></label>
-          <label class="settings-field"><span>Tab sales person</span><input id="sheetSalespersonInput" type="text" /></label>
-          <label class="settings-field"><span>Tab department</span><input id="sheetDepartmentInput" type="text" /></label>
-          <label class="settings-field"><span>Tab alert</span><input id="sheetAlertsInput" type="text" /></label>
-        </div>
-
-        <div class="settings-note">
-          Pengaturan dari jendela ini tersimpan di browser perangkat yang sedang dipakai. Agar ID berlaku permanen bagi semua pengguna, edit bagian <code>DASHBOARD_CONFIG</code> di awal kode JavaScript dalam file <code>index.html</code>.
-        </div>
-
-        <div class="settings-actions">
-          <button id="resetSettingsButton" class="secondary-button" type="button">Kembalikan Default</button>
-          <button class="primary-button" type="submit">Simpan & Muat Data</button>
-        </div>
-      </form>
-    </section>
-  </div>
-
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script async src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" referrerpolicy="no-referrer"></script>
   <script>
 "use strict";
 
@@ -1003,14 +1057,11 @@ document.addEventListener("DOMContentLoaded", () => {
 function cacheElements() {
   [
     "sidebar", "mobileOverlay", "menuButton", "storeSubtitle", "dateInput",
-    "lastUpdated", "refreshButton", "downloadButton", "detailReportButton", "sourceBanner",
+    "lastUpdated", "refreshButton", "detailReportButton", "sourceBanner",
     "salesCard", "furniproCard", "commercialCard", "trendLegend", "trendChart",
     "targetActualTitle", "targetActualBars", "storeSummary",
     "salesTodaySection", "salesMtdSection", "salesTodayTable", "salesMtdTable", "salesKpiTable", "departmentPeriod", "departmentList", "alertList", "footerStatus", "toast",
-    "spreadsheetSettingsButton", "spreadsheetModal", "closeSettingsButton",
-    "spreadsheetSettingsForm", "spreadsheetIdInput", "sheetSummaryInput",
-    "sheetTrendInput", "sheetSalespersonInput", "sheetDepartmentInput",
-    "sheetAlertsInput", "resetSettingsButton", "pageTitle", "pageDescription",
+    "pageTitle", "pageDescription",
     "overviewMetricGrid", "salesPersonSummary", "departmentSummary", "trendSummary",
   ].forEach((id) => { el[id] = document.getElementById(id); });
   el.periodButtons = [...document.querySelectorAll(".period-button")];
@@ -1033,16 +1084,7 @@ function bindEvents() {
     render();
   });
   el.refreshButton.addEventListener("click", () => loadData(true));
-  el.downloadButton.addEventListener("click", downloadCurrentData);
-  el.detailReportButton.addEventListener("click", () => window.print());
-  el.spreadsheetSettingsButton.addEventListener("click", openSpreadsheetSettings);
-  el.closeSettingsButton.addEventListener("click", closeSpreadsheetSettings);
-  el.spreadsheetModal.querySelectorAll("[data-close-settings]").forEach((node) => node.addEventListener("click", closeSpreadsheetSettings));
-  el.spreadsheetSettingsForm.addEventListener("submit", saveSpreadsheetSettings);
-  el.resetSettingsButton.addEventListener("click", resetSpreadsheetSettings);
-  document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && el.spreadsheetModal.classList.contains("show")) closeSpreadsheetSettings();
-  });
+  el.detailReportButton.addEventListener("click", downloadFullReportPdf);
   el.navItems.forEach((item) => item.addEventListener("click", () => toggleSidebar(false)));
   window.addEventListener("hashchange", applyRoute);
 }
@@ -1075,7 +1117,7 @@ async function loadData(forceRefresh) {
     if (!isSpreadsheetIdReady(config.spreadsheetId)) {
       state.data = SAMPLE_DATA;
       state.source = "sample";
-      showSourceBanner("ID Google Spreadsheet belum diisi. Klik Pengaturan Spreadsheet atau edit DASHBOARD_CONFIG pada file index.html.");
+      showSourceBanner("ID Google Spreadsheet belum diisi. Edit DASHBOARD_CONFIG pada file index.html.");
       return;
     }
 
@@ -1245,55 +1287,6 @@ function formatLocalIsoDate(date) {
 
 function formatLocalIsoDateTime(date) {
   return `${formatLocalIsoDate(date)}T${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}:${String(date.getSeconds()).padStart(2, "0")}`;
-}
-
-function openSpreadsheetSettings() {
-  const config = getActiveSpreadsheetConfig();
-  el.spreadsheetIdInput.value = isSpreadsheetIdReady(config.spreadsheetId) ? config.spreadsheetId : "";
-  el.sheetSummaryInput.value = config.sheets.summary;
-  el.sheetTrendInput.value = config.sheets.trend;
-  el.sheetSalespersonInput.value = config.sheets.salesperson;
-  el.sheetDepartmentInput.value = config.sheets.department;
-  el.sheetAlertsInput.value = config.sheets.alerts;
-  el.spreadsheetModal.classList.add("show");
-  el.spreadsheetModal.setAttribute("aria-hidden", "false");
-  setTimeout(() => el.spreadsheetIdInput.focus(), 30);
-}
-
-function closeSpreadsheetSettings() {
-  el.spreadsheetModal.classList.remove("show");
-  el.spreadsheetModal.setAttribute("aria-hidden", "true");
-}
-
-async function saveSpreadsheetSettings(event) {
-  event.preventDefault();
-  const spreadsheetId = extractSpreadsheetId(el.spreadsheetIdInput.value);
-  if (!isSpreadsheetIdReady(spreadsheetId)) {
-    showToast("Masukkan URL atau ID Spreadsheet yang valid.");
-    el.spreadsheetIdInput.focus();
-    return;
-  }
-
-  const config = {
-    spreadsheetId,
-    sheets: {
-      summary: el.sheetSummaryInput.value.trim() || "SUMMARY",
-      trend: el.sheetTrendInput.value.trim() || "TREND",
-      salesperson: el.sheetSalespersonInput.value.trim() || "SALESPERSON",
-      department: el.sheetDepartmentInput.value.trim() || "DEPARTMENT",
-      alerts: el.sheetAlertsInput.value.trim() || "ALERTS",
-    },
-  };
-  localStorage.setItem(LOCAL_CONFIG_KEY, JSON.stringify(config));
-  closeSpreadsheetSettings();
-  await loadData(true);
-}
-
-async function resetSpreadsheetSettings() {
-  localStorage.removeItem(LOCAL_CONFIG_KEY);
-  closeSpreadsheetSettings();
-  showToast("Pengaturan browser dikembalikan ke konfigurasi index.html.");
-  await loadData(true);
 }
 
 function normalizePayload(data) {
@@ -1754,24 +1747,83 @@ function renderEmptyDashboard() {
   el.storeSummary.innerHTML = `<div class="empty-state">Belum ada data SUMMARY pada tanggal ini.</div>`;
 }
 
-function downloadCurrentData() {
-  const payload = {
-    exported_at: new Date().toISOString(),
-    date: state.selectedDate,
-    summary: getSelectedSummary(),
-    trend: state.data.trend.filter((row) => normalizeDate(row.date).startsWith(state.selectedDate.slice(0, 7))),
-    salesperson: filterExactDate(state.data.salesperson),
-    department: filterExactDate(state.data.department),
-    alerts: filterExactDate(state.data.alerts),
+async function downloadFullReportPdf() {
+  const reportElement = document.querySelector(".main-content");
+  if (!reportElement) {
+    showToast("Area dashboard tidak ditemukan.");
+    return;
+  }
+
+  if (el.detailReportButton.disabled) return;
+
+  const originalTitle = el.pageTitle.textContent;
+  const originalDescription = el.pageDescription.textContent;
+  const originalDocumentTitle = document.title;
+  const originalButtonHtml = el.detailReportButton.innerHTML;
+  const filename = `detail-report-${state.selectedDate || formatLocalIsoDate(new Date())}.pdf`;
+
+  const restoreDashboard = () => {
+    document.body.classList.remove("pdf-export-mode");
+    el.pageTitle.textContent = originalTitle;
+    el.pageDescription.textContent = originalDescription;
+    el.detailReportButton.disabled = false;
+    el.detailReportButton.innerHTML = originalButtonHtml;
+    document.title = originalDocumentTitle;
   };
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = `dashboard-${state.selectedDate}.json`;
-  anchor.click();
-  URL.revokeObjectURL(url);
-  showToast("Data dashboard berhasil diunduh.");
+
+  el.detailReportButton.disabled = true;
+  el.detailReportButton.innerHTML = `<span class="nav-icon">…</span><span>Membuat PDF...</span>`;
+  document.body.classList.add("pdf-export-mode");
+  el.pageTitle.textContent = "DETAIL REPORT";
+  el.pageDescription.textContent = `Laporan lengkap dashboard - ${formatDisplayDate(state.selectedDate)}`;
+  document.title = filename.replace(/\.pdf$/i, "");
+  window.scrollTo({ top: 0, behavior: "auto" });
+  showToast("Menyiapkan seluruh halaman dashboard ke PDF...");
+
+  // Tunggu dua frame agar semua tab yang semula tersembunyi selesai dilayout.
+  await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
+  try {
+    if (typeof window.html2pdf !== "function") {
+      showToast("Generator PDF tidak termuat. Membuka dialog cetak.");
+      window.print();
+      return;
+    }
+
+    const options = {
+      margin: [6, 6, 6, 6],
+      filename,
+      image: { type: "jpeg", quality: 0.97 },
+      html2canvas: {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: "#ffffff",
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: 1540,
+      },
+      jsPDF: {
+        unit: "mm",
+        format: "a4",
+        orientation: "landscape",
+        compress: true,
+      },
+      pagebreak: {
+        mode: ["css", "legacy"],
+        avoid: ["tr", ".kpi-card", ".overview-metric-card", ".summary-stat", ".target-item", ".alert-item"],
+      },
+    };
+
+    await window.html2pdf().set(options).from(reportElement).save();
+    showToast("Detail report PDF berhasil diunduh.");
+  } catch (error) {
+    console.error("Gagal membuat PDF:", error);
+    showToast("PDF otomatis gagal dibuat. Membuka dialog cetak.");
+    window.print();
+  } finally {
+    restoreDashboard();
+  }
 }
 
 function setLoading(value) {
