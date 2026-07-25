@@ -1122,8 +1122,6 @@ function renderStoreSummary(summary) {
     ["⌁", "Sales Growth (vs Last Month)", formatSignedPercent(summary.sales_growth), percentNumber(summary.sales_growth) < 0 ? "negative" : "positive"],
     ["🛒", "Average Basket Size", formatCurrency(summary.average_basket_size), ""],
     ["♙", "Traffic", formatNumber(summary.traffic), ""],
-    ["%", "Conversion Rate", formatPercent(percentNumber(summary.conversion_rate)), ""],
-    ["🛒", "UPT (Unit Per Transaction)", formatDecimal(summary.upt), ""],
   ];
   el.storeSummary.innerHTML = items.map(([icon, label, value, cls]) => `<div class="summary-item"><i class="summary-icon">${icon}</i><span>${label}</span><strong class="${cls}">${value}</strong></div>`).join("");
 }
