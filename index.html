@@ -309,6 +309,23 @@ button { cursor: pointer; }
   .footer { align-items: flex-start; flex-direction: column; padding-top: 16px; }
 }
 
+/* ===== SALES PERSON: TODAY, MTD, DAN KPI ===== */
+.salesperson-sections { display: grid; gap: 14px; }
+.salesperson-table-panel { min-height: auto; }
+.salesperson-table-panel .panel-header { margin-bottom: 8px; }
+.salesperson-kpi-table th:nth-child(n+3),
+.salesperson-kpi-table td:nth-child(n+3) { text-align: right; }
+.salesperson-kpi-table .kpi-cell { min-width: 125px; }
+.salesperson-kpi-value { display: block; font-weight: 800; color: var(--ink); }
+.salesperson-kpi-target { display: block; margin-top: 3px; font-size: 8px; color: var(--muted); }
+.salesperson-kpi-progress { height: 5px; margin-top: 5px; border-radius: 999px; background: #e9edf3; overflow: hidden; }
+.salesperson-kpi-progress span { display: block; height: 100%; border-radius: inherit; background: var(--blue); }
+.salesperson-section-note { color: var(--muted); font-size: var(--font-xs); }
+@media (max-width: 720px) {
+  .salesperson-kpi-table { min-width: 900px; }
+  .salesperson-basic-table { min-width: 600px; }
+}
+
 @media print {
   .sidebar, .menu-button, .topbar-actions, .source-banner, .footer, .toast { display: none !important; }
   .main-content { margin: 0; padding: 0; }
@@ -778,15 +795,37 @@ body {
 
       <section class="page-view" id="page-salesperson" data-page="salesperson" aria-label="Halaman sales person">
         <div id="salesPersonSummary" class="summary-stat-grid"></div>
-        <article class="card panel page-panel page-table">
-          <div class="panel-header"><h2>PERFORMA SALES PERSON - <span id="salesPersonPeriod">HARI INI</span></h2></div>
-          <div class="table-wrap">
-            <table class="data-table">
-              <thead><tr><th>RANK</th><th>NAMA</th><th>SALES (Rp)</th><th>% TARGET</th></tr></thead>
-              <tbody id="salesPersonTable"></tbody>
-            </table>
-          </div>
-        </article>
+        <div class="salesperson-sections">
+          <article class="card panel page-table salesperson-table-panel">
+            <div class="panel-header"><h2>SALES TODAY</h2><span class="salesperson-section-note">Pencapaian harian per sales person</span></div>
+            <div class="table-wrap">
+              <table class="data-table salesperson-basic-table">
+                <thead><tr><th>RANK</th><th>NAMA</th><th>SALES TODAY</th><th>TARGET TODAY</th><th>% TARGET</th></tr></thead>
+                <tbody id="salesTodayTable"></tbody>
+              </table>
+            </div>
+          </article>
+
+          <article class="card panel page-table salesperson-table-panel">
+            <div class="panel-header"><h2>SALES MTD</h2><span class="salesperson-section-note">Akumulasi bulan berjalan</span></div>
+            <div class="table-wrap">
+              <table class="data-table salesperson-basic-table">
+                <thead><tr><th>RANK</th><th>NAMA</th><th>SALES MTD</th><th>TARGET MTD</th><th>% TARGET</th></tr></thead>
+                <tbody id="salesMtdTable"></tbody>
+              </table>
+            </div>
+          </article>
+
+          <article class="card panel page-table salesperson-table-panel">
+            <div class="panel-header"><h2>SALES BY KPI</h2><span class="salesperson-section-note">Actual dibanding target masing-masing KPI</span></div>
+            <div class="table-wrap">
+              <table class="data-table salesperson-kpi-table">
+                <thead><tr><th>RANK</th><th>NAMA</th><th>FURNITURE</th><th>ACCESSORIES</th><th>FP</th><th>COMSER</th><th>TOTAL KPI</th></tr></thead>
+                <tbody id="salesKpiTable"></tbody>
+              </table>
+            </div>
+          </article>
+        </div>
       </section>
 
       <section class="page-view" id="page-department" data-page="department" aria-label="Halaman department">
@@ -960,8 +999,8 @@ function cacheElements() {
     "sidebar", "mobileOverlay", "menuButton", "storeSubtitle", "dateInput",
     "lastUpdated", "refreshButton", "downloadButton", "detailReportButton", "sourceBanner",
     "salesCard", "furniproCard", "commercialCard", "trendLegend", "trendChart",
-    "targetActualTitle", "targetActualBars", "storeSummary", "salesPersonPeriod",
-    "salesPersonTable", "departmentList", "alertList", "footerStatus", "toast",
+    "targetActualTitle", "targetActualBars", "storeSummary",
+    "salesTodayTable", "salesMtdTable", "salesKpiTable", "departmentList", "alertList", "footerStatus", "toast",
     "spreadsheetSettingsButton", "spreadsheetModal", "closeSettingsButton",
     "spreadsheetSettingsForm", "spreadsheetIdInput", "sheetSummaryInput",
     "sheetTrendInput", "sheetSalespersonInput", "sheetDepartmentInput",
@@ -1462,38 +1501,108 @@ function renderStoreSummary(summary) {
 }
 
 function renderSalesPeople() {
-  const rows = filterExactDate(state.data.salesperson)
-    .sort((a, b) => number(a.rank) - number(b.rank));
-  el.salesPersonPeriod.textContent = state.mode === "today" ? "HARI INI" : "MTD";
-  if (!rows.length) {
-    el.salesPersonTable.innerHTML = `<tr><td colspan="4" class="empty-state">Belum ada data sales person.</td></tr>`;
+  const rows = filterExactDate(state.data.salesperson);
+  renderSalesPeriodTable(rows, "today", el.salesTodayTable);
+  renderSalesPeriodTable(rows, "mtd", el.salesMtdTable);
+  renderSalesKpiTable(rows);
+}
+
+function getSalesPeriodValues(row, period) {
+  const isToday = period === "today";
+  const actualKeys = isToday ? ["sales_today", "today_sales", "sales"] : ["sales_mtd", "mtd_sales", "sales"];
+  const targetKeys = isToday ? ["target_today", "sales_target_today", "today_target"] : ["target_mtd", "sales_target_mtd", "mtd_target"];
+  const pctKeys = isToday ? ["target_today_pct", "sales_today_pct", "today_target_pct", "target_pct"] : ["target_mtd_pct", "sales_mtd_pct", "mtd_target_pct", "target_pct"];
+  const actual = firstNumber(row, actualKeys);
+  const target = firstNumber(row, targetKeys);
+  const explicitPct = firstPresent(row, pctKeys);
+  const pct = explicitPct !== undefined ? percentNumber(explicitPct) : (target ? actual / target * 100 : 0);
+  return { actual, target, pct };
+}
+
+function renderSalesPeriodTable(rows, period, targetElement) {
+  const ranked = [...rows].sort((a, b) => getSalesPeriodValues(b, period).actual - getSalesPeriodValues(a, period).actual);
+  if (!ranked.length) {
+    targetElement.innerHTML = `<tr><td colspan="5" class="empty-state">Belum ada data sales person.</td></tr>`;
     return;
   }
-  el.salesPersonTable.innerHTML = rows.map((row, index) => {
-    const rank = number(row.rank) || index + 1;
-    const targetPct = percentNumber(row.target_pct);
-    const rankDisplay = rank === 1 ? "🏆" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : `<span class="rank-number">${rank}</span>`;
+  targetElement.innerHTML = ranked.map((row, index) => {
+    const { actual, target, pct } = getSalesPeriodValues(row, period);
     return `<tr>
-      <td class="rank-cell">${rankDisplay}</td>
+      <td class="rank-cell">${rankBadge(index + 1)}</td>
       <td>${escapeHtml(row.name || "-")}</td>
-      <td>${formatNumber(row.sales)}</td>
-      <td class="${targetClass(targetPct)}">${formatPercent(targetPct)}</td>
+      <td>${formatCurrency(actual)}</td>
+      <td>${formatCurrency(target)}</td>
+      <td class="${targetClass(pct)}">${formatPercent(pct)}</td>
     </tr>`;
   }).join("");
 }
 
+const SALES_KPI_CONFIG = [
+  { key: "furniture", label: "Furniture" },
+  { key: "accessories", label: "Accessories" },
+  { key: "fp", label: "FP" },
+  { key: "comser", label: "Comser" },
+];
+
+function getSalesKpi(row, key) {
+  const aliases = {
+    furniture: ["furniture", "furniture_sales", "sales_furniture"],
+    accessories: ["accessories", "accessory", "accessories_sales", "sales_accessories"],
+    fp: ["fp", "furnipro", "furniture_protection", "fp_sales"],
+    comser: ["comser", "commercial", "commercial_service", "comser_sales"],
+  };
+  const actual = firstNumber(row, aliases[key] || [key]);
+  const target = firstNumber(row, (aliases[key] || [key]).flatMap((name) => [`${name}_target`, `target_${name}`]));
+  const pctRaw = firstPresent(row, (aliases[key] || [key]).flatMap((name) => [`${name}_pct`, `${name}_target_pct`, `target_${name}_pct`]));
+  const pct = pctRaw !== undefined ? percentNumber(pctRaw) : (target ? actual / target * 100 : 0);
+  return { actual, target, pct };
+}
+
+function renderSalesKpiTable(rows) {
+  const ranked = [...rows].map((row) => {
+    const kpis = Object.fromEntries(SALES_KPI_CONFIG.map(({ key }) => [key, getSalesKpi(row, key)]));
+    const actual = Object.values(kpis).reduce((sum, item) => sum + item.actual, 0);
+    const target = Object.values(kpis).reduce((sum, item) => sum + item.target, 0);
+    return { row, kpis, actual, target, pct: target ? actual / target * 100 : 0 };
+  }).sort((a, b) => b.actual - a.actual);
+
+  if (!ranked.length) {
+    el.salesKpiTable.innerHTML = `<tr><td colspan="7" class="empty-state">Belum ada data KPI sales person.</td></tr>`;
+    return;
+  }
+
+  el.salesKpiTable.innerHTML = ranked.map((item, index) => `<tr>
+    <td class="rank-cell">${rankBadge(index + 1)}</td>
+    <td>${escapeHtml(item.row.name || "-")}</td>
+    ${SALES_KPI_CONFIG.map(({ key }) => renderSalesKpiCell(item.kpis[key])).join("")}
+    <td class="kpi-cell"><span class="salesperson-kpi-value">${formatCurrency(item.actual)}</span><span class="salesperson-kpi-target">Target ${formatCurrency(item.target)} · <b class="${targetClass(item.pct)}">${formatPercent(item.pct)}</b></span><div class="salesperson-kpi-progress"><span style="width:${clamp(item.pct, 0, 100)}%"></span></div></td>
+  </tr>`).join("");
+}
+
+function renderSalesKpiCell(item) {
+  return `<td class="kpi-cell"><span class="salesperson-kpi-value">${formatCurrency(item.actual)}</span><span class="salesperson-kpi-target">Target ${formatCurrency(item.target)} · <b class="${targetClass(item.pct)}">${formatPercent(item.pct)}</b></span><div class="salesperson-kpi-progress"><span style="width:${clamp(item.pct, 0, 100)}%"></span></div></td>`;
+}
+
 function renderSalesPersonSummary() {
-  const rows = filterExactDate(state.data.salesperson).sort((a, b) => number(b.sales) - number(a.sales));
-  const total = rows.reduce((sum, row) => sum + number(row.sales), 0);
-  const avgTarget = rows.length ? rows.reduce((sum, row) => sum + percentNumber(row.target_pct), 0) / rows.length : 0;
-  const top = rows[0];
+  const rows = filterExactDate(state.data.salesperson);
+  const todayTotal = rows.reduce((sum, row) => sum + getSalesPeriodValues(row, "today").actual, 0);
+  const mtdTotal = rows.reduce((sum, row) => sum + getSalesPeriodValues(row, "mtd").actual, 0);
+  const mtdTarget = rows.reduce((sum, row) => sum + getSalesPeriodValues(row, "mtd").target, 0);
+  const top = [...rows].sort((a, b) => getSalesPeriodValues(b, "mtd").actual - getSalesPeriodValues(a, "mtd").actual)[0];
   el.salesPersonSummary.innerHTML = [
     ["Jumlah Sales Person", formatNumber(rows.length), "Data pada tanggal terpilih"],
-    ["Total Penjualan", formatCurrency(total), "Akumulasi seluruh sales"],
-    ["Rata-rata Target", formatPercent(avgTarget), "Rata-rata pencapaian"],
-    ["Top Performer", top ? escapeHtml(top.name) : "-", top ? formatCurrency(top.sales) : "Belum ada data"],
+    ["Total Sales Today", formatCurrency(todayTotal), "Akumulasi seluruh sales"],
+    ["Total Sales MTD", formatCurrency(mtdTotal), mtdTarget ? `${formatPercent(mtdTotal / mtdTarget * 100)} dari target` : "Target belum diisi"],
+    ["Top Performer MTD", top ? escapeHtml(top.name) : "-", top ? formatCurrency(getSalesPeriodValues(top, "mtd").actual) : "Belum ada data"],
   ].map(([label, value, note]) => `<article class="card summary-stat"><span>${label}</span><strong>${value}</strong><small>${note}</small></article>`).join("");
 }
+
+function firstPresent(row, keys) {
+  for (const key of keys) if (row[key] !== undefined && row[key] !== null && row[key] !== "") return row[key];
+  return undefined;
+}
+function firstNumber(row, keys) { const value = firstPresent(row, keys); return value === undefined ? 0 : number(value); }
+function rankBadge(rank) { return rank === 1 ? "🏆" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : `<span class="rank-number">${rank}</span>`; }
 
 function renderDepartments() {
   const rows = filterExactDate(state.data.department)
@@ -1575,7 +1684,8 @@ function renderEmptyDashboard() {
   el.trendChart.innerHTML = `<div class="chart-empty">Belum ada data.</div>`;
   el.targetActualBars.innerHTML = `<div class="empty-state">Belum ada data.</div>`;
   el.storeSummary.innerHTML = `<div class="empty-state">Belum ada data.</div>`;
-  el.salesPersonTable.innerHTML = `<tr><td colspan="4" class="empty-state">Belum ada data.</td></tr>`;
+  [el.salesTodayTable, el.salesMtdTable].forEach((node) => { node.innerHTML = `<tr><td colspan="5" class="empty-state">Belum ada data.</td></tr>`; });
+  el.salesKpiTable.innerHTML = `<tr><td colspan="7" class="empty-state">Belum ada data.</td></tr>`;
   el.departmentList.innerHTML = `<div class="empty-state">Belum ada data.</div>`;
   el.alertList.innerHTML = `<div class="empty-state">Belum ada data.</div>`;
 }
@@ -1726,11 +1836,11 @@ function createSampleData() {
     }],
     trend,
     salesperson: [
-      { date, store, rank: 1, name: "NIA BALI NUR ASTUTI", sales: 13430000, target_pct: 268 },
-      { date, store, rank: 2, name: "RIDWAN", sales: 9436729, target_pct: 189 },
-      { date, store, rank: 3, name: "DIAH NIRWANA WULAN", sales: 6710072, target_pct: 134 },
-      { date, store, rank: 4, name: "INDRIANI NUR MACHRONI", sales: 3242355, target_pct: 64 },
-      { date, store, rank: 5, name: "NANDA NOVITASARI", sales: 2671110, target_pct: 53 },
+      { date, store, name: "NIA BALI NUR ASTUTI", sales_today: 13430000, target_today: 5000000, sales_mtd: 188500000, target_mtd: 160000000, furniture: 108000000, furniture_target: 85000000, accessories: 42500000, accessories_target: 40000000, fp: 23500000, fp_target: 22000000, comser: 14500000, comser_target: 13000000 },
+      { date, store, name: "RIDWAN", sales_today: 9436729, target_today: 5000000, sales_mtd: 171200000, target_mtd: 160000000, furniture: 97000000, furniture_target: 85000000, accessories: 39000000, accessories_target: 40000000, fp: 21800000, fp_target: 22000000, comser: 13400000, comser_target: 13000000 },
+      { date, store, name: "DIAH NIRWANA WULAN", sales_today: 6710072, target_today: 5000000, sales_mtd: 149600000, target_mtd: 160000000, furniture: 83000000, furniture_target: 85000000, accessories: 33800000, accessories_target: 40000000, fp: 20100000, fp_target: 22000000, comser: 12700000, comser_target: 13000000 },
+      { date, store, name: "INDRIANI NUR MACHRONI", sales_today: 3242355, target_today: 5000000, sales_mtd: 116400000, target_mtd: 160000000, furniture: 64200000, furniture_target: 85000000, accessories: 27900000, accessories_target: 40000000, fp: 15100000, fp_target: 22000000, comser: 9200000, comser_target: 13000000 },
+      { date, store, name: "NANDA NOVITASARI", sales_today: 2671110, target_today: 5000000, sales_mtd: 98400000, target_mtd: 160000000, furniture: 53800000, furniture_target: 85000000, accessories: 24100000, accessories_target: 40000000, fp: 12700000, fp_target: 22000000, comser: 7800000, comser_target: 13000000 },
     ],
     department: [
       { date, store, department: "HOME CLASSIC", sales: 1021304082, target_pct: 102 },
