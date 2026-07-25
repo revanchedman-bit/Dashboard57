@@ -945,7 +945,7 @@ const FIELD_MAP = {
   furnipro: {
     label: "FURNIPRO",
     icon: "🛋",
-    unit: "pcs",
+    unit: "polis",
     today: "furnipro_today",
     targetToday: "furnipro_target_today",
     gapToday: "furnipro_gap_today",
@@ -984,7 +984,9 @@ const SAMPLE_DATA = createSampleData();
 const state = {
   data: SAMPLE_DATA,
   mode: "today",
-  selectedDate: "2026-07-20",
+  // Saat dashboard pertama kali dibuka, tanggal aktif mengikuti tanggal hari ini
+  // berdasarkan waktu lokal perangkat pengguna.
+  selectedDate: formatLocalIsoDate(new Date()),
   source: "sample",
   loading: false,
   page: "overview",
@@ -1059,7 +1061,7 @@ function applyRoute() {
 }
 
 async function initialize() {
-  state.selectedDate = latestDate(SAMPLE_DATA.summary) || state.selectedDate;
+  state.selectedDate = formatLocalIsoDate(new Date());
   applyRoute();
   populateControls();
   render();
@@ -1092,11 +1094,19 @@ async function loadData(forceRefresh) {
 
     state.data = data;
     state.source = "google-sheet";
-    const allRows = Object.values(state.data).flatMap((rows) => Array.isArray(rows) ? rows : []);
-    const availableDates = unique(allRows.map((row) => normalizeDate(row.date)).filter(Boolean));
-    if (!availableDates.includes(state.selectedDate)) state.selectedDate = latestDate(state.data.summary) || latestDate(allRows);
+
+    // Buka tanggal hari ini apabila tersedia. Jika belum ada data pada tanggal
+    // tersebut, otomatis gunakan tanggal terakhir yang benar-benar memiliki data.
+    let fallbackDate = "";
+    if (!hasDashboardDataForDate(state.data, state.selectedDate)) {
+      fallbackDate = latestDashboardDataDate(state.data);
+      if (fallbackDate) state.selectedDate = fallbackDate;
+    }
+
     showSourceBanner("");
-    showToast("Data Google Spreadsheet berhasil dimuat.");
+    showToast(fallbackDate
+      ? `Data hari ini belum tersedia. Menampilkan data ${formatDisplayDate(fallbackDate)}.`
+      : "Data Google Spreadsheet berhasil dimuat.");
   } catch (error) {
     console.error(error);
     state.data = SAMPLE_DATA;
@@ -1311,8 +1321,14 @@ function populateControls() {
   const allRows = Object.values(state.data).flatMap((rows) => Array.isArray(rows) ? rows : []);
   const dates = unique(allRows.map((row) => normalizeDate(row.date)).filter(Boolean)).sort();
   if (dates.length) {
-    el.dateInput.min = dates[0];
-    el.dateInput.max = dates[dates.length - 1];
+    // Masukkan tanggal aktif ke rentang kontrol agar tanggal hari ini tetap valid,
+    // walaupun belum ada pada Spreadsheet.
+    const selectableDates = unique([...dates, state.selectedDate]).sort();
+    el.dateInput.min = selectableDates[0];
+    el.dateInput.max = selectableDates[selectableDates.length - 1];
+  } else {
+    el.dateInput.removeAttribute("min");
+    el.dateInput.removeAttribute("max");
   }
 }
 
@@ -1811,7 +1827,7 @@ function valueOrComputed(value, fallback) {
 function parseLocaleNumber(value) {
   if (typeof value === "number") return value;
   if (value === null || value === undefined) return NaN;
-  let raw = String(value).trim().replace(/\s/g, "").replace(/Rp/gi, "").replace(/pcs?/gi, "").replace(/%/g, "");
+  let raw = String(value).trim().replace(/\s/g, "").replace(/Rp/gi, "").replace(/pcs?|polis/gi, "").replace(/%/g, "");
   if (!raw) return NaN;
   const negative = raw.startsWith("-");
   raw = raw.replace(/[^0-9,.-]/g, "");
@@ -1837,6 +1853,59 @@ function latestDate(rows) {
   return rows.map((row) => normalizeDate(row.date)).filter(Boolean).sort().at(-1) || "";
 }
 
+function rowHasDashboardData(row) {
+  const ignoredKeys = new Set(["date", "store", "updated", "updated_at"]);
+  return Object.entries(row || {}).some(([key, value]) => {
+    if (ignoredKeys.has(key)) return false;
+    return value !== undefined && value !== null && String(value).trim() !== "";
+  });
+}
+
+function hasDashboardDataForDate(data, date) {
+  const normalizedDate = normalizeDate(date);
+  if (!normalizedDate) return false;
+
+  // SUMMARY menjadi acuan utama agar baris tanggal kosong di TREND atau tab lain
+  // tidak dianggap sebagai data dashboard yang sudah tersedia.
+  const summaryRows = Array.isArray(data?.summary) ? data.summary : [];
+  if (summaryRows.some((row) => rowHasDashboardData(row))) {
+    return summaryRows.some((row) =>
+      normalizeDate(row.date) === normalizedDate && rowHasDashboardData(row)
+    );
+  }
+
+  return Object.values(data || {}).some((rows) =>
+    Array.isArray(rows) && rows.some((row) =>
+      normalizeDate(row.date) === normalizedDate && rowHasDashboardData(row)
+    )
+  );
+}
+
+function latestDashboardDataDate(data) {
+  const summaryRows = Array.isArray(data?.summary) ? data.summary : [];
+  const preferredRows = summaryRows.some((row) => rowHasDashboardData(row))
+    ? summaryRows
+    : Object.values(data || {}).flatMap((rows) => Array.isArray(rows) ? rows : []);
+
+  const dates = unique(preferredRows
+    .filter((row) => rowHasDashboardData(row))
+    .map((row) => normalizeDate(row.date))
+    .filter(Boolean))
+    .sort();
+
+  if (!dates.length) return "";
+
+  const today = formatLocalIsoDate(new Date());
+  const datesUntilToday = dates.filter((date) => date <= today);
+  return datesUntilToday.at(-1) || dates.at(-1) || "";
+}
+
+function formatDisplayDate(value) {
+  const date = normalizeDate(value);
+  if (!date) return "-";
+  return new Intl.DateTimeFormat("id-ID", { dateStyle: "long" }).format(new Date(`${date}T00:00:00`));
+}
+
 function formatCurrency(value) {
   return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(number(value)).replace("Rp", "Rp ");
 }
@@ -1844,8 +1913,16 @@ function formatNumber(value) { return new Intl.NumberFormat("id-ID", { maximumFr
 function formatDecimal(value) { return new Intl.NumberFormat("id-ID", { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(number(value)); }
 function formatPercent(value) { return `${new Intl.NumberFormat("id-ID", { maximumFractionDigits: 1 }).format(number(value))}%`; }
 function formatSignedPercent(value) { const n = percentNumber(value); return `${n > 0 ? "+" : ""}${formatPercent(n)}`; }
-function formatMetric(value, unit) { return unit === "currency" ? formatCurrency(value) : `${formatNumber(value)} pcs`; }
-function formatSignedMetric(value, unit) { const n = number(value); const sign = n > 0 ? "+" : ""; return unit === "currency" ? `${sign}${formatCurrency(n)}` : `${sign}${formatNumber(n)} pcs`; }
+function formatMetric(value, unit) {
+  if (unit === "currency") return formatCurrency(value);
+  return `${formatNumber(value)} ${unit || ""}`.trim();
+}
+function formatSignedMetric(value, unit) {
+  const n = number(value);
+  const sign = n > 0 ? "+" : "";
+  if (unit === "currency") return `${sign}${formatCurrency(n)}`;
+  return `${sign}${formatNumber(n)} ${unit || ""}`.trim();
+}
 function formatDateTime(value) {
   const normalized = String(value || "").trim();
   const date = new Date(normalized.includes("T") ? normalized : normalized.replace(" ", "T"));
