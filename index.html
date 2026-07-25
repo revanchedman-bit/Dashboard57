@@ -77,16 +77,16 @@ button { cursor: pointer; }
 .nav-item.active { background: linear-gradient(135deg, #0876ef, #095fcd); color: #fff; box-shadow: 0 8px 24px rgba(0, 103, 229, .28); }
 .nav-icon { width: 20px; font-size: 18px; text-align: center; }
 .sidebar-spacer { flex: 1; min-height: 24px; }
-.store-box, .update-box {
+.update-box {
   border: 1px solid rgba(255,255,255,.16);
   background: rgba(255,255,255,.045);
   border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
-.store-box { padding: 13px 12px; }
-.store-box label { display: block; margin-bottom: 6px; font-size: 10px; font-weight: 700; opacity: .8; }
-.store-box select { width: 100%; color: #fff; background: transparent; border: 0; outline: none; font-size: 11px; }
-.store-box option { color: #111827; }
-.update-box { margin-top: 15px; padding: 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .update-box span { display: block; font-size: 9px; opacity: .78; }
 .update-box strong { display: block; margin-top: 3px; font-size: 10px; font-weight: 500; line-height: 1.4; }
 .icon-button { border: 0; background: transparent; color: #fff; font-size: 21px; }
@@ -380,11 +380,6 @@ button { cursor: pointer; }
 
       <div class="sidebar-spacer"></div>
 
-      <div class="store-box">
-        <label for="storeSelect">STORE</label>
-        <select id="storeSelect" aria-label="Pilih store"></select>
-      </div>
-
       <div class="update-box">
         <div>
           <span>Update Terakhir</span>
@@ -535,7 +530,7 @@ button { cursor: pointer; }
    3. Spreadsheet harus dibagikan: Siapa saja yang memiliki link - Pelihat.
    ======================================================================== */
 const DASHBOARD_CONFIG = {
-  spreadsheetId: "1m2SgvaQbqRBI9EpBrVxN9xpQ4KgRV4qLjT27AfmlC0A",
+  spreadsheetId: "GANTI_ID_SPREADSHEET_DI_SINI",
   sheets: {
     summary: "SUMMARY",
     trend: "TREND",
@@ -627,7 +622,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function cacheElements() {
   [
-    "sidebar", "mobileOverlay", "menuButton", "storeSelect", "storeSubtitle", "dateInput",
+    "sidebar", "mobileOverlay", "menuButton", "storeSubtitle", "dateInput",
     "lastUpdated", "refreshButton", "downloadButton", "detailReportButton", "sourceBanner",
     "salesCard", "furniproCard", "commercialCard", "trendLegend", "trendChart",
     "targetActualTitle", "targetActualBars", "storeSummary", "salesPersonPeriod",
@@ -655,10 +650,6 @@ function bindEvents() {
   });
   el.dateInput.addEventListener("change", () => {
     state.selectedDate = el.dateInput.value;
-    render();
-  });
-  el.storeSelect.addEventListener("change", () => {
-    state.store = el.storeSelect.value;
     render();
   });
   el.refreshButton.addEventListener("click", () => loadData(true));
@@ -940,9 +931,8 @@ function normalizeRow(row) {
 
 function populateControls() {
   const stores = unique(state.data.summary.map((row) => row.store).filter(Boolean));
-  el.storeSelect.innerHTML = stores.map((store) => `<option value="${escapeHtml(store)}">${escapeHtml(store)}</option>`).join("");
+  // Dashboard digunakan untuk satu store. Nama store otomatis mengikuti data pertama di SUMMARY.
   if (!stores.includes(state.store)) state.store = stores[0] || state.store;
-  el.storeSelect.value = state.store;
   el.dateInput.value = state.selectedDate;
   const dates = state.data.summary.map((row) => normalizeDate(row.date)).filter(Boolean).sort();
   if (dates.length) {
