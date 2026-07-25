@@ -796,7 +796,7 @@ body {
       <section class="page-view" id="page-salesperson" data-page="salesperson" aria-label="Halaman sales person">
         <div id="salesPersonSummary" class="summary-stat-grid"></div>
         <div class="salesperson-sections">
-          <article class="card panel page-table salesperson-table-panel">
+          <article class="card panel page-table salesperson-table-panel" id="salesTodaySection">
             <div class="panel-header"><h2>SALES TODAY</h2><span class="salesperson-section-note">Pencapaian harian per sales person</span></div>
             <div class="table-wrap">
               <table class="data-table salesperson-basic-table">
@@ -806,7 +806,7 @@ body {
             </div>
           </article>
 
-          <article class="card panel page-table salesperson-table-panel">
+          <article class="card panel page-table salesperson-table-panel" id="salesMtdSection">
             <div class="panel-header"><h2>SALES MTD</h2><span class="salesperson-section-note">Akumulasi bulan berjalan</span></div>
             <div class="table-wrap">
               <table class="data-table salesperson-basic-table">
@@ -1000,7 +1000,7 @@ function cacheElements() {
     "lastUpdated", "refreshButton", "downloadButton", "detailReportButton", "sourceBanner",
     "salesCard", "furniproCard", "commercialCard", "trendLegend", "trendChart",
     "targetActualTitle", "targetActualBars", "storeSummary",
-    "salesTodayTable", "salesMtdTable", "salesKpiTable", "departmentList", "alertList", "footerStatus", "toast",
+    "salesTodaySection", "salesMtdSection", "salesTodayTable", "salesMtdTable", "salesKpiTable", "departmentList", "alertList", "footerStatus", "toast",
     "spreadsheetSettingsButton", "spreadsheetModal", "closeSettingsButton",
     "spreadsheetSettingsForm", "spreadsheetIdInput", "sheetSummaryInput",
     "sheetTrendInput", "sheetSalespersonInput", "sheetDepartmentInput",
@@ -1502,8 +1502,17 @@ function renderStoreSummary(summary) {
 
 function renderSalesPeople() {
   const rows = filterExactDate(state.data.salesperson);
-  renderSalesPeriodTable(rows, "today", el.salesTodayTable);
-  renderSalesPeriodTable(rows, "mtd", el.salesMtdTable);
+  const isToday = state.mode === "today";
+
+  el.salesTodaySection.classList.toggle("hidden", !isToday);
+  el.salesMtdSection.classList.toggle("hidden", isToday);
+
+  if (isToday) {
+    renderSalesPeriodTable(rows, "today", el.salesTodayTable);
+  } else {
+    renderSalesPeriodTable(rows, "mtd", el.salesMtdTable);
+  }
+
   renderSalesKpiTable(rows);
 }
 
@@ -1585,15 +1594,17 @@ function renderSalesKpiCell(item) {
 
 function renderSalesPersonSummary() {
   const rows = filterExactDate(state.data.salesperson);
-  const todayTotal = rows.reduce((sum, row) => sum + getSalesPeriodValues(row, "today").actual, 0);
-  const mtdTotal = rows.reduce((sum, row) => sum + getSalesPeriodValues(row, "mtd").actual, 0);
-  const mtdTarget = rows.reduce((sum, row) => sum + getSalesPeriodValues(row, "mtd").target, 0);
-  const top = [...rows].sort((a, b) => getSalesPeriodValues(b, "mtd").actual - getSalesPeriodValues(a, "mtd").actual)[0];
+  const period = state.mode === "today" ? "today" : "mtd";
+  const periodLabel = period === "today" ? "Today" : "MTD";
+  const totalActual = rows.reduce((sum, row) => sum + getSalesPeriodValues(row, period).actual, 0);
+  const totalTarget = rows.reduce((sum, row) => sum + getSalesPeriodValues(row, period).target, 0);
+  const achievement = totalTarget ? totalActual / totalTarget * 100 : 0;
+  const top = [...rows].sort((a, b) => getSalesPeriodValues(b, period).actual - getSalesPeriodValues(a, period).actual)[0];
   el.salesPersonSummary.innerHTML = [
     ["Jumlah Sales Person", formatNumber(rows.length), "Data pada tanggal terpilih"],
-    ["Total Sales Today", formatCurrency(todayTotal), "Akumulasi seluruh sales"],
-    ["Total Sales MTD", formatCurrency(mtdTotal), mtdTarget ? `${formatPercent(mtdTotal / mtdTarget * 100)} dari target` : "Target belum diisi"],
-    ["Top Performer MTD", top ? escapeHtml(top.name) : "-", top ? formatCurrency(getSalesPeriodValues(top, "mtd").actual) : "Belum ada data"],
+    [`Total Sales ${periodLabel}`, formatCurrency(totalActual), "Akumulasi seluruh sales"],
+    [`Target Sales ${periodLabel}`, formatCurrency(totalTarget), totalTarget ? `${formatPercent(achievement)} tercapai` : "Target belum diisi"],
+    [`Top Performer ${periodLabel}`, top ? escapeHtml(top.name) : "-", top ? formatCurrency(getSalesPeriodValues(top, period).actual) : "Belum ada data"],
   ].map(([label, value, note]) => `<article class="card summary-stat"><span>${label}</span><strong>${value}</strong><small>${note}</small></article>`).join("");
 }
 
