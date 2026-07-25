@@ -213,6 +213,63 @@ button { cursor: pointer; }
 .toast.show { opacity: 1; transform: translateY(0); }
 .mobile-overlay { display: none; }
 
+
+
+/* ===== HALAMAN / TAB DASHBOARD ===== */
+.page-view { display: none; }
+.page-view.active { display: block; animation: pageFade .22s ease; }
+@keyframes pageFade { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+.title-group p { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; }
+.title-divider { color: #a8b2c1; }
+.overview-metric-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.overview-metric-card { position: relative; overflow: hidden; padding: 18px; }
+.overview-metric-card::after { content: ""; position: absolute; right: -28px; bottom: -36px; width: 112px; height: 112px; border-radius: 50%; background: currentColor; opacity: .06; }
+.overview-metric-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.overview-metric-name { display: flex; align-items: center; gap: 9px; font-size: 12px; font-weight: 800; }
+.overview-metric-icon { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; color: #fff; font-size: 17px; }
+.overview-metric-card.blue { color: var(--blue); }
+.overview-metric-card.green { color: var(--green); }
+.overview-metric-card.orange { color: var(--orange); }
+.overview-metric-card.blue .overview-metric-icon { background: var(--blue); }
+.overview-metric-card.green .overview-metric-icon { background: var(--green); }
+.overview-metric-card.orange .overview-metric-icon { background: var(--orange); }
+.overview-metric-value { margin-top: 14px; color: var(--ink); font-size: clamp(21px, 2vw, 28px); font-weight: 850; letter-spacing: -.4px; }
+.overview-metric-foot { display: flex; justify-content: space-between; gap: 10px; margin-top: 10px; color: var(--muted); font-size: 10px; }
+.overview-metric-foot strong { color: inherit; }
+.overview-grid { grid-template-columns: 1fr 1fr 1fr; }
+.page-panel { min-height: 470px; }
+.page-panel .panel-header h2 { font-size: 14px; }
+.page-table .data-table { font-size: 12px; }
+.page-table .data-table th { padding: 13px 10px; font-size: 10px; }
+.page-table .data-table td { padding: 14px 10px; }
+.summary-stat-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 14px; }
+.summary-stat { min-height: 102px; padding: 15px 16px; }
+.summary-stat span { display: block; color: var(--muted); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; }
+.summary-stat strong { display: block; margin-top: 9px; font-size: 20px; line-height: 1.25; }
+.summary-stat small { display: block; margin-top: 5px; color: var(--muted); font-size: 10px; }
+.full-chart-panel { min-height: 540px; }
+.full-chart-panel .trend-chart { height: 440px; }
+.department-page-list { gap: 23px; padding: 10px 4px; }
+.department-page-list .department-row { grid-template-columns: minmax(130px, .8fr) 1.4fr minmax(140px, .8fr) 60px; font-size: 12px; }
+.department-page-list .department-bar { height: 11px; }
+
+@media (max-width: 1280px) {
+  .overview-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .overview-grid > :last-child { grid-column: 1 / -1; }
+}
+@media (max-width: 980px) {
+  .overview-metric-grid { grid-template-columns: 1fr; }
+  .summary-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 720px) {
+  .overview-grid { grid-template-columns: 1fr; }
+  .overview-grid > :last-child { grid-column: auto; }
+  .summary-stat-grid { grid-template-columns: 1fr; }
+  .full-chart-panel { min-height: auto; }
+  .full-chart-panel .trend-chart { height: 310px; }
+  .department-page-list .department-row { grid-template-columns: 95px 1fr 45px; }
+}
+
 @media (max-width: 1280px) {
   .content-grid-three, .lower-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .content-grid-three > :last-child, .lower-grid > :last-child { grid-column: 1 / -1; }
@@ -340,12 +397,12 @@ button { cursor: pointer; }
     <div class="mobile-overlay" id="mobileOverlay"></div>
 
     <main class="main-content">
-      <header class="topbar" id="overview">
+      <header class="topbar">
         <div class="title-group">
           <button id="menuButton" class="menu-button" type="button" aria-label="Buka menu">☰</button>
           <div>
-            <h1>PERFORMANCE DASHBOARD</h1>
-            <p id="storeSubtitle">Informa Samarinda Square</p>
+            <h1 id="pageTitle">OVERVIEW</h1>
+            <p><span id="pageDescription">Ringkasan performa store</span><span class="title-divider">•</span><span id="storeSubtitle">Informa Samarinda Square</span></p>
           </div>
         </div>
 
@@ -363,63 +420,61 @@ button { cursor: pointer; }
 
       <div id="sourceBanner" class="source-banner hidden" role="status"></div>
 
-      <section class="kpi-grid" id="kpi" aria-label="KPI utama">
-        <article class="kpi-card card kpi-blue" id="salesCard"></article>
-        <article class="kpi-card card kpi-green" id="furniproCard"></article>
-        <article class="kpi-card card kpi-orange" id="commercialCard"></article>
+      <section class="page-view active" id="page-overview" data-page="overview" aria-label="Halaman overview">
+        <div id="overviewMetricGrid" class="overview-metric-grid"></div>
+        <section class="content-grid overview-grid">
+          <article class="card panel">
+            <div class="panel-header"><h2 id="targetActualTitle">TARGET vs ACTUAL - HARI INI</h2></div>
+            <div id="targetActualBars" class="target-bars"></div>
+          </article>
+          <article class="card panel">
+            <div class="panel-header"><h2>RINGKASAN PERFORMA STORE</h2></div>
+            <div id="storeSummary" class="summary-list"></div>
+          </article>
+          <article class="card panel">
+            <div class="panel-header"><h2>ALERT & INFORMASI</h2></div>
+            <div id="alertList" class="alert-list"></div>
+          </article>
+        </section>
       </section>
 
-      <section class="content-grid content-grid-three" id="trend">
-        <article class="card panel chart-panel">
+      <section class="page-view" id="page-kpi" data-page="kpi" aria-label="Halaman KPI performance">
+        <section class="kpi-grid" id="kpi" aria-label="KPI utama">
+          <article class="kpi-card card kpi-blue" id="salesCard"></article>
+          <article class="kpi-card card kpi-green" id="furniproCard"></article>
+          <article class="kpi-card card kpi-orange" id="commercialCard"></article>
+        </section>
+      </section>
+
+      <section class="page-view" id="page-salesperson" data-page="salesperson" aria-label="Halaman sales person">
+        <div id="salesPersonSummary" class="summary-stat-grid"></div>
+        <article class="card panel page-panel page-table">
+          <div class="panel-header"><h2>PERFORMA SALES PERSON - <span id="salesPersonPeriod">HARI INI</span></h2></div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead><tr><th>RANK</th><th>NAMA</th><th>SALES (Rp)</th><th>% TARGET</th></tr></thead>
+              <tbody id="salesPersonTable"></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <section class="page-view" id="page-department" data-page="department" aria-label="Halaman department">
+        <div id="departmentSummary" class="summary-stat-grid"></div>
+        <article class="card panel page-panel">
+          <div class="panel-header"><h2>PERFORMA DEPARTMENT - MTD</h2></div>
+          <div id="departmentList" class="department-list department-page-list"></div>
+        </article>
+      </section>
+
+      <section class="page-view" id="page-trend" data-page="trend" aria-label="Halaman trend analysis">
+        <div id="trendSummary" class="summary-stat-grid"></div>
+        <article class="card panel chart-panel full-chart-panel">
           <div class="panel-header">
             <h2>TREND PENCAPAIAN MTD (%)</h2>
             <div class="chart-legend" id="trendLegend"></div>
           </div>
           <div id="trendChart" class="trend-chart" aria-label="Grafik trend pencapaian"></div>
-        </article>
-
-        <article class="card panel">
-          <div class="panel-header">
-            <h2 id="targetActualTitle">TARGET vs ACTUAL - HARI INI</h2>
-          </div>
-          <div id="targetActualBars" class="target-bars"></div>
-        </article>
-
-        <article class="card panel">
-          <div class="panel-header">
-            <h2>RINGKASAN PERFORMA STORE</h2>
-          </div>
-          <div id="storeSummary" class="summary-list"></div>
-        </article>
-      </section>
-
-      <section class="content-grid content-grid-three lower-grid">
-        <article class="card panel" id="salesperson">
-          <div class="panel-header">
-            <h2>TOP 5 SALES PERSON - <span id="salesPersonPeriod">HARI INI</span></h2>
-          </div>
-          <div class="table-wrap">
-            <table class="data-table">
-              <thead>
-                <tr><th>RANK</th><th>NAMA</th><th>SALES (Rp)</th><th>% TARGET</th></tr>
-              </thead>
-              <tbody id="salesPersonTable"></tbody>
-            </table>
-          </div>
-        </article>
-
-        <article class="card panel" id="department">
-          <div class="panel-header">
-            <h2>TOP DEPARTMENT - MTD</h2>
-          </div>
-          <div id="departmentList" class="department-list"></div>
-        </article>
-
-        <article class="card panel">
-          <div class="panel-header">
-            <h2>ALERT & INFORMASI</h2>
-          </div>
-          <div id="alertList" class="alert-list"></div>
         </article>
       </section>
 
@@ -541,6 +596,15 @@ const FIELD_MAP = {
   },
 };
 
+
+const PAGE_META = {
+  overview: { title: "OVERVIEW", description: "Ringkasan performa store" },
+  kpi: { title: "KPI PERFORMANCE", description: "Pencapaian Sales, FurniPro, dan Commercial Service" },
+  salesperson: { title: "SALES PERSON", description: "Peringkat dan pencapaian tenaga penjualan" },
+  department: { title: "DEPARTMENT", description: "Performa penjualan berdasarkan department" },
+  trend: { title: "TREND ANALYSIS", description: "Pergerakan pencapaian month to date" },
+};
+
 const SAMPLE_DATA = createSampleData();
 
 const state = {
@@ -550,6 +614,7 @@ const state = {
   store: "Informa Samarinda Square",
   source: "sample",
   loading: false,
+  page: "overview",
 };
 
 const el = {};
@@ -570,10 +635,12 @@ function cacheElements() {
     "spreadsheetSettingsButton", "spreadsheetModal", "closeSettingsButton",
     "spreadsheetSettingsForm", "spreadsheetIdInput", "sheetSummaryInput",
     "sheetTrendInput", "sheetSalespersonInput", "sheetDepartmentInput",
-    "sheetAlertsInput", "resetSettingsButton",
+    "sheetAlertsInput", "resetSettingsButton", "pageTitle", "pageDescription",
+    "overviewMetricGrid", "salesPersonSummary", "departmentSummary", "trendSummary",
   ].forEach((id) => { el[id] = document.getElementById(id); });
   el.periodButtons = [...document.querySelectorAll(".period-button")];
   el.navItems = [...document.querySelectorAll(".nav-item[href]")];
+  el.pageViews = [...document.querySelectorAll(".page-view")];
 }
 
 function bindEvents() {
@@ -605,15 +672,26 @@ function bindEvents() {
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && el.spreadsheetModal.classList.contains("show")) closeSpreadsheetSettings();
   });
-  el.navItems.forEach((item) => item.addEventListener("click", () => {
-    el.navItems.forEach((link) => link.classList.remove("active"));
-    item.classList.add("active");
-    toggleSidebar(false);
-  }));
+  el.navItems.forEach((item) => item.addEventListener("click", () => toggleSidebar(false)));
+  window.addEventListener("hashchange", applyRoute);
+}
+
+function applyRoute() {
+  const requested = String(location.hash || "#overview").replace(/^#/, "").toLowerCase();
+  const page = PAGE_META[requested] ? requested : "overview";
+  state.page = page;
+  if (!location.hash || requested !== page) history.replaceState(null, "", `#${page}`);
+  el.pageViews.forEach((view) => view.classList.toggle("active", view.dataset.page === page));
+  el.navItems.forEach((item) => item.classList.toggle("active", item.dataset.section === page));
+  el.pageTitle.textContent = PAGE_META[page].title;
+  el.pageDescription.textContent = PAGE_META[page].description;
+  document.title = `${PAGE_META[page].title} - Performance Dashboard`;
+  window.scrollTo({ top: 0, behavior: "auto" });
 }
 
 async function initialize() {
   state.selectedDate = latestDate(SAMPLE_DATA.summary) || state.selectedDate;
+  applyRoute();
   populateControls();
   render();
   await loadData(false);
@@ -883,6 +961,7 @@ function render() {
     return;
   }
 
+  renderOverviewMetrics(summary);
   renderKpiCard("sales", summary, el.salesCard);
   renderKpiCard("furnipro", summary, el.furniproCard);
   renderKpiCard("commercial", summary, el.commercialCard);
@@ -890,7 +969,10 @@ function render() {
   renderTargetBars(summary);
   renderStoreSummary(summary);
   renderSalesPeople();
+  renderSalesPersonSummary();
   renderDepartments();
+  renderDepartmentSummary();
+  renderTrendSummary();
   renderAlerts();
 
   const updated = summary.updated_at || summary.updated || state.selectedDate;
@@ -903,6 +985,24 @@ function getSelectedSummary() {
   return rows.find((row) => normalizeDate(row.date) === state.selectedDate)
     || rows.sort((a, b) => normalizeDate(b.date).localeCompare(normalizeDate(a.date)))[0]
     || null;
+}
+
+function renderOverviewMetrics(summary) {
+  const isToday = state.mode === "today";
+  const colorClass = { sales: "blue", furnipro: "green", commercial: "orange" };
+  el.overviewMetricGrid.innerHTML = Object.entries(FIELD_MAP).map(([type, cfg]) => {
+    const actual = number(summary[isToday ? cfg.today : cfg.mtd]);
+    const target = number(summary[isToday ? cfg.targetToday : cfg.targetMtd]);
+    const achievement = percentValue(summary[isToday ? cfg.achToday : cfg.achMtd], actual, target);
+    return `<article class="card overview-metric-card ${colorClass[type]}">
+      <div class="overview-metric-head">
+        <div class="overview-metric-name"><span class="overview-metric-icon">${cfg.icon}</span>${cfg.label}</div>
+        <strong>${formatPercent(achievement)}</strong>
+      </div>
+      <div class="overview-metric-value">${formatMetric(actual, cfg.unit)}</div>
+      <div class="overview-metric-foot"><span>${isToday ? "Hari ini" : "MTD"}</span><span>Target <strong>${formatMetric(target, cfg.unit)}</strong></span></div>
+    </article>`;
+  }).join("");
 }
 
 function renderKpiCard(type, summary, target) {
@@ -1040,8 +1140,7 @@ function renderStoreSummary(summary) {
 
 function renderSalesPeople() {
   const rows = filterExactDate(state.data.salesperson)
-    .sort((a, b) => number(a.rank) - number(b.rank))
-    .slice(0, 5);
+    .sort((a, b) => number(a.rank) - number(b.rank));
   el.salesPersonPeriod.textContent = state.mode === "today" ? "HARI INI" : "MTD";
   if (!rows.length) {
     el.salesPersonTable.innerHTML = `<tr><td colspan="4" class="empty-state">Belum ada data sales person.</td></tr>`;
@@ -1060,10 +1159,22 @@ function renderSalesPeople() {
   }).join("");
 }
 
+function renderSalesPersonSummary() {
+  const rows = filterExactDate(state.data.salesperson).sort((a, b) => number(b.sales) - number(a.sales));
+  const total = rows.reduce((sum, row) => sum + number(row.sales), 0);
+  const avgTarget = rows.length ? rows.reduce((sum, row) => sum + percentNumber(row.target_pct), 0) / rows.length : 0;
+  const top = rows[0];
+  el.salesPersonSummary.innerHTML = [
+    ["Jumlah Sales Person", formatNumber(rows.length), "Data pada tanggal terpilih"],
+    ["Total Penjualan", formatCurrency(total), "Akumulasi seluruh sales"],
+    ["Rata-rata Target", formatPercent(avgTarget), "Rata-rata pencapaian"],
+    ["Top Performer", top ? escapeHtml(top.name) : "-", top ? formatCurrency(top.sales) : "Belum ada data"],
+  ].map(([label, value, note]) => `<article class="card summary-stat"><span>${label}</span><strong>${value}</strong><small>${note}</small></article>`).join("");
+}
+
 function renderDepartments() {
   const rows = filterExactDate(state.data.department)
-    .sort((a, b) => number(b.sales) - number(a.sales))
-    .slice(0, 5);
+    .sort((a, b) => number(b.sales) - number(a.sales));
   if (!rows.length) {
     el.departmentList.innerHTML = `<div class="empty-state">Belum ada data department.</div>`;
     return;
@@ -1077,6 +1188,39 @@ function renderDepartments() {
       <div class="department-pct ${targetClass(pct)}">${formatPercent(pct)}</div>
     </div>`;
   }).join("");
+}
+
+function renderDepartmentSummary() {
+  const rows = filterExactDate(state.data.department).sort((a, b) => number(b.sales) - number(a.sales));
+  const total = rows.reduce((sum, row) => sum + number(row.sales), 0);
+  const avgTarget = rows.length ? rows.reduce((sum, row) => sum + percentNumber(row.target_pct), 0) / rows.length : 0;
+  const top = rows[0];
+  el.departmentSummary.innerHTML = [
+    ["Jumlah Department", formatNumber(rows.length), "Department yang tercatat"],
+    ["Total Penjualan", formatCurrency(total), "Akumulasi department"],
+    ["Rata-rata Target", formatPercent(avgTarget), "Rata-rata pencapaian"],
+    ["Department Teratas", top ? escapeHtml(top.department) : "-", top ? formatCurrency(top.sales) : "Belum ada data"],
+  ].map(([label, value, note]) => `<article class="card summary-stat"><span>${label}</span><strong>${value}</strong><small>${note}</small></article>`).join("");
+}
+
+function renderTrendSummary() {
+  const month = state.selectedDate.slice(0, 7);
+  const rows = state.data.trend
+    .filter((row) => row.store === state.store && normalizeDate(row.date).startsWith(month))
+    .sort((a, b) => number(a.day) - number(b.day));
+  const latest = rows.at(-1) || {};
+  const metrics = [
+    ["Sales", percentNumber(latest.sales_pct)],
+    ["FurniPro", percentNumber(latest.furnipro_pct)],
+    ["Commercial", percentNumber(latest.commercial_pct)],
+  ];
+  const best = [...metrics].sort((a, b) => b[1] - a[1])[0] || ["-", 0];
+  el.trendSummary.innerHTML = [
+    ["Hari Terakhir", rows.length ? `Hari ke-${number(latest.day)}` : "-", `${rows.length} titik data`],
+    ["Sales MTD", formatPercent(metrics[0][1]), "Pencapaian terakhir"],
+    ["FurniPro MTD", formatPercent(metrics[1][1]), "Pencapaian terakhir"],
+    ["Performa Tertinggi", best[0], formatPercent(best[1])],
+  ].map(([label, value, note]) => `<article class="card summary-stat"><span>${label}</span><strong>${value}</strong><small>${note}</small></article>`).join("");
 }
 
 function renderAlerts() {
@@ -1100,6 +1244,10 @@ function filterExactDate(rows) {
 }
 
 function renderEmptyDashboard() {
+  el.overviewMetricGrid.innerHTML = `<div class="card empty-state">Data ringkasan tidak ditemukan.</div>`;
+  el.salesPersonSummary.innerHTML = "";
+  el.departmentSummary.innerHTML = "";
+  el.trendSummary.innerHTML = "";
   [el.salesCard, el.furniproCard, el.commercialCard].forEach((node) => { node.innerHTML = `<div class="empty-state">Data ringkasan tidak ditemukan.</div>`; });
   el.trendChart.innerHTML = `<div class="chart-empty">Belum ada data.</div>`;
   el.targetActualBars.innerHTML = `<div class="empty-state">Belum ada data.</div>`;
