@@ -1364,7 +1364,7 @@ function renderOverviewMetrics(summary) {
   el.overviewMetricGrid.innerHTML = Object.entries(FIELD_MAP).map(([type, cfg]) => {
     const actual = number(summary[isToday ? cfg.today : cfg.mtd]);
     const target = number(summary[isToday ? cfg.targetToday : cfg.targetMtd]);
-    const achievement = percentValue(summary[isToday ? cfg.achToday : cfg.achMtd], actual, target);
+    const achievement = target ? (actual / target) * 100 : 0;
     return `<article class="card overview-metric-card ${colorClass[type]}">
       <div class="overview-metric-head">
         <div class="overview-metric-name"><span class="overview-metric-icon">${cfg.icon}</span>${cfg.label}</div>
@@ -1394,23 +1394,25 @@ function renderKpiCard(type, summary, target) {
   if (isToday) {
     actual = number(summary[cfg.today]);
     targetValue = number(summary[cfg.targetToday]);
-    achievement = percentValue(summary[cfg.achToday], actual, targetValue);
-    gap = valueOrComputed(summary[cfg.gapToday], actual - targetValue);
+    // Selalu hitung dari actual dan target periode aktif agar tidak memakai kolom formula yang tertukar.
+    achievement = targetValue ? (actual / targetValue) * 100 : 0;
+    gap = actual - targetValue;
 
     alternateActual = number(summary[cfg.mtd]);
     alternateTarget = number(summary[cfg.targetMtd]);
-    alternateAchievement = percentValue(summary[cfg.achMtd], alternateActual, alternateTarget);
+    alternateAchievement = alternateTarget ? (alternateActual / alternateTarget) * 100 : 0;
     periodLabel = "HARI INI";
     alternateLabel = "MTD";
   } else {
     actual = number(summary[cfg.mtd]);
     targetValue = number(summary[cfg.targetMtd]);
-    achievement = percentValue(summary[cfg.achMtd], actual, targetValue);
+    // Selalu hitung dari actual dan target periode aktif agar tidak memakai kolom formula yang tertukar.
+    achievement = targetValue ? (actual / targetValue) * 100 : 0;
     gap = actual - targetValue;
 
     alternateActual = number(summary[cfg.today]);
     alternateTarget = number(summary[cfg.targetToday]);
-    alternateAchievement = percentValue(summary[cfg.achToday], alternateActual, alternateTarget);
+    alternateAchievement = alternateTarget ? (alternateActual / alternateTarget) * 100 : 0;
     periodLabel = "MONTH TO DATE";
     alternateLabel = "HARI INI";
   }
@@ -1506,7 +1508,7 @@ function renderTargetBars(summary) {
   el.targetActualBars.innerHTML = Object.entries(FIELD_MAP).map(([type, cfg]) => {
     const actual = number(summary[isToday ? cfg.today : cfg.mtd]);
     const targetValue = number(summary[isToday ? cfg.targetToday : cfg.targetMtd]);
-    const pct = percentValue(summary[isToday ? cfg.achToday : cfg.achMtd], actual, targetValue);
+    const pct = targetValue ? (actual / targetValue) * 100 : 0;
     return `<div class="target-item">
       <h3>${titleCase(cfg.label)}</h3>
       <p>${formatMetric(actual, cfg.unit)} / ${formatMetric(targetValue, cfg.unit)}</p>
@@ -1521,7 +1523,7 @@ function renderTargetBars(summary) {
 function renderStoreSummary(summary) {
   const salesMtd = number(summary.sales_mtd);
   const targetMtd = number(summary.sales_target_mtd);
-  const achievementMtd = percentValue(summary.sales_achievement_mtd, salesMtd, targetMtd);
+  const achievementMtd = targetMtd ? (salesMtd / targetMtd) * 100 : 0;
   const items = [
     ["♟", "Total Sales MTD", formatCurrency(salesMtd), ""],
     ["◎", "Total Target MTD", formatCurrency(targetMtd), ""],
