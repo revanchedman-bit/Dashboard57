@@ -1642,15 +1642,26 @@ function renderDepartments() {
     el.departmentList.innerHTML = `<div class="empty-state">Belum ada data department.</div>`;
     return;
   }
+  const maxToday = period === "today"
+    ? Math.max(...rows.map((row) => getDepartmentPeriodValues(row, period).actual), 0)
+    : 0;
   el.departmentList.innerHTML = rows.map((row) => {
     const values = getDepartmentPeriodValues(row, period);
     const growth = getDepartmentGrowth(row);
     const growthClass = growth > 0 ? "positive" : growth < 0 ? "negative" : "";
+    const barWidth = period === "today"
+      ? (maxToday ? values.actual / maxToday * 100 : 0)
+      : values.pct;
+    const salesText = period === "today"
+      ? formatCurrency(values.actual)
+      : `${formatCurrency(values.actual)} / ${formatCurrency(values.target)}`;
+    const pctText = period === "today" ? "" : formatPercent(values.pct);
+    const pctClass = period === "today" ? "" : targetClass(values.pct);
     return `<div class="department-row">
       <div class="department-name">${escapeHtml(row.department || "-")}</div>
-      <div class="department-bar"><span style="width:${clamp(values.pct, 0, 100)}%"></span></div>
-      <div class="department-sales">${formatCurrency(values.actual)} / ${formatCurrency(values.target)}</div>
-      <div class="department-pct ${targetClass(values.pct)}">${formatPercent(values.pct)}</div>
+      <div class="department-bar"><span style="width:${clamp(barWidth, 0, 100)}%"></span></div>
+      <div class="department-sales">${salesText}</div>
+      <div class="department-pct ${pctClass}">${pctText}</div>
       <div class="department-growth ${growthClass}">${growth >= 0 ? "+" : ""}${formatPercent(growth)}</div>
     </div>`;
   }).join("");
@@ -1667,12 +1678,19 @@ function renderDepartmentSummary() {
   const totalLastYear = rows.reduce((sum, row) => sum + firstNumber(row, ["mtd_last_year", "sales_mtd_last_year", "last_year_mtd"]), 0);
   const growth = totalLastYear ? (totalMtd - totalLastYear) / totalLastYear * 100 : 0;
   const top = rows[0];
-  el.departmentSummary.innerHTML = [
-    [`Total Sales ${periodLabel}`, formatCurrency(totalActual), `Target MTD ${formatCurrency(totalTarget)}`],
-    [`Achievement ${periodLabel}`, formatPercent(achievement), totalTarget ? "Actual dibanding target MTD" : "Target MTD belum diisi"],
+  const summaryCards = period === "today" ? [
+    ["Total Sales Today", formatCurrency(totalActual), "Total penjualan seluruh department hari ini"],
+    ["Jumlah Department", formatNumber(rows.length), "Department dengan data pada tanggal terpilih"],
     ["Growth vs Last Year", `${growth >= 0 ? "+" : ""}${formatPercent(growth)}`, `MTD ${formatCurrency(totalMtd)} vs LY ${formatCurrency(totalLastYear)}`],
-    [`Department Teratas ${periodLabel}`, top ? escapeHtml(top.department) : "-", top ? formatCurrency(getDepartmentPeriodValues(top, period).actual) : "Belum ada data"],
-  ].map(([label, value, note]) => `<article class="card summary-stat"><span>${label}</span><strong>${value}</strong><small>${note}</small></article>`).join("");
+    ["Department Teratas Today", top ? escapeHtml(top.department) : "-", top ? formatCurrency(getDepartmentPeriodValues(top, period).actual) : "Belum ada data"],
+  ] : [
+    ["Total Sales MTD", formatCurrency(totalActual), `Target MTD ${formatCurrency(totalTarget)}`],
+    ["Achievement MTD", formatPercent(achievement), totalTarget ? "Actual MTD dibanding target MTD" : "Target MTD belum diisi"],
+    ["Growth vs Last Year", `${growth >= 0 ? "+" : ""}${formatPercent(growth)}`, `MTD ${formatCurrency(totalMtd)} vs LY ${formatCurrency(totalLastYear)}`],
+    ["Department Teratas MTD", top ? escapeHtml(top.department) : "-", top ? formatCurrency(getDepartmentPeriodValues(top, period).actual) : "Belum ada data"],
+  ];
+  el.departmentSummary.innerHTML = summaryCards
+    .map(([label, value, note]) => `<article class="card summary-stat"><span>${label}</span><strong>${value}</strong><small>${note}</small></article>`).join("");
 }
 
 function renderTrendSummary() {
