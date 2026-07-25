@@ -904,8 +904,9 @@ body {
 /* ========================================================================
    KONFIGURASI YANG PALING SERING DIEDIT
    1. Ganti spreadsheetId dengan ID Google Spreadsheet Anda.
-   2. Jangan mengubah nama header kolom pada template Spreadsheet.
-   3. Spreadsheet harus dibagikan: Siapa saja yang memiliki link - Pelihat.
+   2. Data dicocokkan berdasarkan kolom date; kolom store tidak diperlukan.
+   3. Jangan mengubah nama header kolom pada template Spreadsheet.
+   4. Spreadsheet harus dibagikan: Siapa saja yang memiliki link - Pelihat.
    ======================================================================== */
 const DASHBOARD_CONFIG = {
   spreadsheetId: "1m2SgvaQbqRBI9EpBrVxN9xpQ4KgRV4qLjT27AfmlC0A",
@@ -984,7 +985,6 @@ const state = {
   data: SAMPLE_DATA,
   mode: "today",
   selectedDate: "2026-07-20",
-  store: "Informa Samarinda Square",
   source: "sample",
   loading: false,
   page: "overview",
@@ -1092,10 +1092,9 @@ async function loadData(forceRefresh) {
 
     state.data = data;
     state.source = "google-sheet";
-    const availableDates = state.data.summary.map((row) => normalizeDate(row.date)).filter(Boolean);
-    if (!availableDates.includes(state.selectedDate)) state.selectedDate = latestDate(state.data.summary);
-    const stores = unique(state.data.summary.map((row) => row.store).filter(Boolean));
-    if (!stores.includes(state.store)) state.store = stores[0] || state.store;
+    const allRows = Object.values(state.data).flatMap((rows) => Array.isArray(rows) ? rows : []);
+    const availableDates = unique(allRows.map((row) => normalizeDate(row.date)).filter(Boolean));
+    if (!availableDates.includes(state.selectedDate)) state.selectedDate = latestDate(state.data.summary) || latestDate(allRows);
     showSourceBanner("");
     showToast("Data Google Spreadsheet berhasil dimuat.");
   } catch (error) {
@@ -1202,7 +1201,7 @@ function gvizTableToObjects(table) {
       });
       return output;
     })
-    .filter((row) => row.date || row.store);
+    .filter((row) => row.date);
 }
 
 function normalizeHeader(value) {
@@ -1308,11 +1307,9 @@ function normalizeRow(row) {
 }
 
 function populateControls() {
-  const stores = unique(state.data.summary.map((row) => row.store).filter(Boolean));
-  // Dashboard digunakan untuk satu store. Nama store otomatis mengikuti data pertama di SUMMARY.
-  if (!stores.includes(state.store)) state.store = stores[0] || state.store;
   el.dateInput.value = state.selectedDate;
-  const dates = state.data.summary.map((row) => normalizeDate(row.date)).filter(Boolean).sort();
+  const allRows = Object.values(state.data).flatMap((rows) => Array.isArray(rows) ? rows : []);
+  const dates = unique(allRows.map((row) => normalizeDate(row.date)).filter(Boolean)).sort();
   if (dates.length) {
     el.dateInput.min = dates[0];
     el.dateInput.max = dates[dates.length - 1];
@@ -1321,21 +1318,21 @@ function populateControls() {
 
 function render() {
   const summary = getSelectedSummary();
-  el.storeSubtitle.textContent = state.store || "Performance Store";
   el.dateInput.value = state.selectedDate;
 
-  if (!summary) {
+  if (summary) {
+    renderOverviewMetrics(summary);
+    renderKpiCard("sales", summary, el.salesCard);
+    renderKpiCard("furnipro", summary, el.furniproCard);
+    renderKpiCard("commercial", summary, el.commercialCard);
+    renderTargetBars(summary);
+    renderStoreSummary(summary);
+  } else {
     renderEmptyDashboard();
-    return;
   }
 
-  renderOverviewMetrics(summary);
-  renderKpiCard("sales", summary, el.salesCard);
-  renderKpiCard("furnipro", summary, el.furniproCard);
-  renderKpiCard("commercial", summary, el.commercialCard);
+  // Setiap tab tetap dirender berdasarkan tanggal, walaupun SUMMARY kosong.
   renderTrend();
-  renderTargetBars(summary);
-  renderStoreSummary(summary);
   renderSalesPeople();
   renderSalesPersonSummary();
   renderDepartments();
@@ -1343,16 +1340,13 @@ function render() {
   renderTrendSummary();
   renderAlerts();
 
-  const updated = summary.updated_at || summary.updated || state.selectedDate;
+  const updated = summary?.updated_at || summary?.updated || state.selectedDate;
   el.lastUpdated.textContent = formatDateTime(updated);
   el.footerStatus.textContent = state.loading ? "Memuat..." : state.source === "sample" ? "Data contoh" : "Terhubung ke Spreadsheet";
 }
 
 function getSelectedSummary() {
-  const rows = state.data.summary.filter((row) => row.store === state.store);
-  return rows.find((row) => normalizeDate(row.date) === state.selectedDate)
-    || rows.sort((a, b) => normalizeDate(b.date).localeCompare(normalizeDate(a.date)))[0]
-    || null;
+  return state.data.summary.find((row) => normalizeDate(row.date) === state.selectedDate) || null;
 }
 
 function renderOverviewMetrics(summary) {
@@ -1426,7 +1420,7 @@ function renderKpiCard(type, summary, target) {
 function renderTrend() {
   const monthKey = state.selectedDate.slice(0, 7);
   const rows = state.data.trend
-    .filter((row) => row.store === state.store && normalizeDate(row.date).startsWith(monthKey))
+    .filter((row) => normalizeDate(row.date).startsWith(monthKey))
     .sort((a, b) => number(a.day) - number(b.day));
 
   el.trendLegend.innerHTML = [
@@ -1696,7 +1690,7 @@ function renderDepartmentSummary() {
 function renderTrendSummary() {
   const month = state.selectedDate.slice(0, 7);
   const rows = state.data.trend
-    .filter((row) => row.store === state.store && normalizeDate(row.date).startsWith(month))
+    .filter((row) => normalizeDate(row.date).startsWith(month))
     .sort((a, b) => number(a.day) - number(b.day));
   const latest = rows.at(-1) || {};
   const metrics = [
@@ -1730,31 +1724,26 @@ function renderAlerts() {
 }
 
 function filterExactDate(rows) {
-  return rows.filter((row) => row.store === state.store && normalizeDate(row.date) === state.selectedDate);
+  return rows.filter((row) => normalizeDate(row.date) === state.selectedDate);
 }
 
 function renderEmptyDashboard() {
-  el.overviewMetricGrid.innerHTML = `<div class="card empty-state">Data ringkasan tidak ditemukan.</div>`;
-  el.salesPersonSummary.innerHTML = "";
-  el.departmentSummary.innerHTML = "";
-  el.trendSummary.innerHTML = "";
-  [el.salesCard, el.furniproCard, el.commercialCard].forEach((node) => { node.innerHTML = `<div class="empty-state">Data ringkasan tidak ditemukan.</div>`; });
-  el.trendChart.innerHTML = `<div class="chart-empty">Belum ada data.</div>`;
-  el.targetActualBars.innerHTML = `<div class="empty-state">Belum ada data.</div>`;
-  el.storeSummary.innerHTML = `<div class="empty-state">Belum ada data.</div>`;
-  [el.salesTodayTable, el.salesMtdTable].forEach((node) => { node.innerHTML = `<tr><td colspan="5" class="empty-state">Belum ada data.</td></tr>`; });
-  el.salesKpiTable.innerHTML = `<tr><td colspan="7" class="empty-state">Belum ada data.</td></tr>`;
-  el.departmentList.innerHTML = `<div class="empty-state">Belum ada data.</div>`;
-  el.alertList.innerHTML = `<div class="empty-state">Belum ada data.</div>`;
+  // Hanya bagian yang bergantung pada tab SUMMARY yang dikosongkan.
+  // Sales person, department, trend, dan alert tetap dirender dari tab masing-masing.
+  el.overviewMetricGrid.innerHTML = `<div class="card empty-state">Data SUMMARY tidak ditemukan untuk tanggal ${escapeHtml(state.selectedDate)}.</div>`;
+  [el.salesCard, el.furniproCard, el.commercialCard].forEach((node) => {
+    node.innerHTML = `<div class="empty-state">Data SUMMARY tidak ditemukan untuk tanggal ini.</div>`;
+  });
+  el.targetActualBars.innerHTML = `<div class="empty-state">Belum ada data SUMMARY pada tanggal ini.</div>`;
+  el.storeSummary.innerHTML = `<div class="empty-state">Belum ada data SUMMARY pada tanggal ini.</div>`;
 }
 
 function downloadCurrentData() {
   const payload = {
     exported_at: new Date().toISOString(),
     date: state.selectedDate,
-    store: state.store,
     summary: getSelectedSummary(),
-    trend: state.data.trend.filter((row) => row.store === state.store && normalizeDate(row.date).startsWith(state.selectedDate.slice(0, 7))),
+    trend: state.data.trend.filter((row) => normalizeDate(row.date).startsWith(state.selectedDate.slice(0, 7))),
     salesperson: filterExactDate(state.data.salesperson),
     department: filterExactDate(state.data.department),
     alerts: filterExactDate(state.data.alerts),
@@ -1763,7 +1752,7 @@ function downloadCurrentData() {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = `dashboard-${state.store.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${state.selectedDate}.json`;
+  anchor.download = `dashboard-${state.selectedDate}.json`;
   anchor.click();
   URL.revokeObjectURL(url);
   showToast("Data dashboard berhasil diunduh.");
