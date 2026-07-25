@@ -253,6 +253,10 @@ button { cursor: pointer; }
 .department-page-list .department-row { grid-template-columns: minmax(130px, .8fr) 1.4fr minmax(140px, .8fr) 60px; font-size: 12px; }
 .department-page-list .department-bar { height: 11px; }
 
+.department-page-list .department-row { grid-template-columns: minmax(130px,.9fr) 1.25fr minmax(135px,.8fr) 62px 90px; }
+.department-growth { text-align:right; font-weight:800; white-space:nowrap; }
+.department-section-note { color:var(--muted); font-size:var(--font-xs); }
+
 @media (max-width: 1280px) {
   .overview-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .overview-grid > :last-child { grid-column: 1 / -1; }
@@ -831,7 +835,7 @@ body {
       <section class="page-view" id="page-department" data-page="department" aria-label="Halaman department">
         <div id="departmentSummary" class="summary-stat-grid"></div>
         <article class="card panel page-panel">
-          <div class="panel-header"><h2>PERFORMA DEPARTMENT - MTD</h2></div>
+          <div class="panel-header"><h2>PERFORMA DEPARTMENT - <span id="departmentPeriod">HARI INI</span></h2><span class="department-section-note">Growth membandingkan MTD tahun ini dengan MTD tahun lalu</span></div>
           <div id="departmentList" class="department-list department-page-list"></div>
         </article>
       </section>
@@ -1000,7 +1004,7 @@ function cacheElements() {
     "lastUpdated", "refreshButton", "downloadButton", "detailReportButton", "sourceBanner",
     "salesCard", "furniproCard", "commercialCard", "trendLegend", "trendChart",
     "targetActualTitle", "targetActualBars", "storeSummary",
-    "salesTodaySection", "salesMtdSection", "salesTodayTable", "salesMtdTable", "salesKpiTable", "departmentList", "alertList", "footerStatus", "toast",
+    "salesTodaySection", "salesMtdSection", "salesTodayTable", "salesMtdTable", "salesKpiTable", "departmentPeriod", "departmentList", "alertList", "footerStatus", "toast",
     "spreadsheetSettingsButton", "spreadsheetModal", "closeSettingsButton",
     "spreadsheetSettingsForm", "spreadsheetIdInput", "sheetSummaryInput",
     "sheetTrendInput", "sheetSalespersonInput", "sheetDepartmentInput",
@@ -1615,34 +1619,59 @@ function firstPresent(row, keys) {
 function firstNumber(row, keys) { const value = firstPresent(row, keys); return value === undefined ? 0 : number(value); }
 function rankBadge(rank) { return rank === 1 ? "🏆" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : `<span class="rank-number">${rank}</span>`; }
 
+function getDepartmentPeriodValues(row, period) {
+  const isToday = period === "today";
+  const actual = firstNumber(row, isToday ? ["sales_today", "today", "sales"] : ["sales_mtd", "mtd", "sales"]);
+  // Department selalu memakai target MTD sebagai acuan, termasuk saat mode HARI INI.
+  const target = firstNumber(row, ["target_mtd", "sales_target_mtd"]);
+  return { actual, target, pct: target ? actual / target * 100 : percentNumber(row.target_pct) };
+}
+
+function getDepartmentGrowth(row) {
+  const current = firstNumber(row, ["sales_mtd", "mtd", "sales"]);
+  const lastYear = firstNumber(row, ["mtd_last_year", "sales_mtd_last_year", "last_year_mtd"]);
+  return lastYear ? (current - lastYear) / lastYear * 100 : 0;
+}
+
 function renderDepartments() {
+  const period = state.mode === "today" ? "today" : "mtd";
   const rows = filterExactDate(state.data.department)
-    .sort((a, b) => number(b.sales) - number(a.sales));
+    .sort((a, b) => getDepartmentPeriodValues(b, period).actual - getDepartmentPeriodValues(a, period).actual);
+  el.departmentPeriod.textContent = period === "today" ? "HARI INI" : "MTD";
   if (!rows.length) {
     el.departmentList.innerHTML = `<div class="empty-state">Belum ada data department.</div>`;
     return;
   }
   el.departmentList.innerHTML = rows.map((row) => {
-    const pct = percentNumber(row.target_pct);
+    const values = getDepartmentPeriodValues(row, period);
+    const growth = getDepartmentGrowth(row);
+    const growthClass = growth > 0 ? "positive" : growth < 0 ? "negative" : "";
     return `<div class="department-row">
       <div class="department-name">${escapeHtml(row.department || "-")}</div>
-      <div class="department-bar"><span style="width:${clamp(pct, 0, 100)}%"></span></div>
-      <div class="department-sales">${formatCurrency(row.sales)}</div>
-      <div class="department-pct ${targetClass(pct)}">${formatPercent(pct)}</div>
+      <div class="department-bar"><span style="width:${clamp(values.pct, 0, 100)}%"></span></div>
+      <div class="department-sales">${formatCurrency(values.actual)} / ${formatCurrency(values.target)}</div>
+      <div class="department-pct ${targetClass(values.pct)}">${formatPercent(values.pct)}</div>
+      <div class="department-growth ${growthClass}">${growth >= 0 ? "+" : ""}${formatPercent(growth)}</div>
     </div>`;
   }).join("");
 }
 
 function renderDepartmentSummary() {
-  const rows = filterExactDate(state.data.department).sort((a, b) => number(b.sales) - number(a.sales));
-  const total = rows.reduce((sum, row) => sum + number(row.sales), 0);
-  const avgTarget = rows.length ? rows.reduce((sum, row) => sum + percentNumber(row.target_pct), 0) / rows.length : 0;
+  const period = state.mode === "today" ? "today" : "mtd";
+  const periodLabel = period === "today" ? "Today" : "MTD";
+  const rows = filterExactDate(state.data.department).sort((a, b) => getDepartmentPeriodValues(b, period).actual - getDepartmentPeriodValues(a, period).actual);
+  const totalActual = rows.reduce((sum, row) => sum + getDepartmentPeriodValues(row, period).actual, 0);
+  const totalTarget = rows.reduce((sum, row) => sum + getDepartmentPeriodValues(row, period).target, 0);
+  const achievement = totalTarget ? totalActual / totalTarget * 100 : 0;
+  const totalMtd = rows.reduce((sum, row) => sum + firstNumber(row, ["sales_mtd", "mtd", "sales"]), 0);
+  const totalLastYear = rows.reduce((sum, row) => sum + firstNumber(row, ["mtd_last_year", "sales_mtd_last_year", "last_year_mtd"]), 0);
+  const growth = totalLastYear ? (totalMtd - totalLastYear) / totalLastYear * 100 : 0;
   const top = rows[0];
   el.departmentSummary.innerHTML = [
-    ["Jumlah Department", formatNumber(rows.length), "Department yang tercatat"],
-    ["Total Penjualan", formatCurrency(total), "Akumulasi department"],
-    ["Rata-rata Target", formatPercent(avgTarget), "Rata-rata pencapaian"],
-    ["Department Teratas", top ? escapeHtml(top.department) : "-", top ? formatCurrency(top.sales) : "Belum ada data"],
+    [`Total Sales ${periodLabel}`, formatCurrency(totalActual), `Target MTD ${formatCurrency(totalTarget)}`],
+    [`Achievement ${periodLabel}`, formatPercent(achievement), totalTarget ? "Actual dibanding target MTD" : "Target MTD belum diisi"],
+    ["Growth vs Last Year", `${growth >= 0 ? "+" : ""}${formatPercent(growth)}`, `MTD ${formatCurrency(totalMtd)} vs LY ${formatCurrency(totalLastYear)}`],
+    [`Department Teratas ${periodLabel}`, top ? escapeHtml(top.department) : "-", top ? formatCurrency(getDepartmentPeriodValues(top, period).actual) : "Belum ada data"],
   ].map(([label, value, note]) => `<article class="card summary-stat"><span>${label}</span><strong>${value}</strong><small>${note}</small></article>`).join("");
 }
 
@@ -1854,11 +1883,11 @@ function createSampleData() {
       { date, store, name: "NANDA NOVITASARI", sales_today: 2671110, target_today: 5000000, sales_mtd: 98400000, target_mtd: 160000000, furniture: 53800000, furniture_target: 85000000, accessories: 24100000, accessories_target: 40000000, fp: 12700000, fp_target: 22000000, comser: 7800000, comser_target: 13000000 },
     ],
     department: [
-      { date, store, department: "HOME CLASSIC", sales: 1021304082, target_pct: 102 },
-      { date, store, department: "SOFA & CHAIR", sales: 892771211, target_pct: 94 },
-      { date, store, department: "BEDROOM", sales: 687220643, target_pct: 82 },
-      { date, store, department: "DINING", sales: 456118439, target_pct: 67 },
-      { date, store, department: "KIDS SPACE", sales: 189237884, target_pct: 38 },
+      { date, store, department: "HOME CLASSIC", sales_today: 48200000, target_today: 42000000, sales_mtd: 1021304082, target_mtd: 1000000000, mtd_last_year: 925000000 },
+      { date, store, department: "SOFA & CHAIR", sales_today: 39750000, target_today: 40000000, sales_mtd: 892771211, target_mtd: 950000000, mtd_last_year: 910000000 },
+      { date, store, department: "BEDROOM", sales_today: 31400000, target_today: 35000000, sales_mtd: 687220643, target_mtd: 835000000, mtd_last_year: 640000000 },
+      { date, store, department: "DINING", sales_today: 22800000, target_today: 30000000, sales_mtd: 456118439, target_mtd: 680000000, mtd_last_year: 490000000 },
+      { date, store, department: "KIDS SPACE", sales_today: 9600000, target_today: 18000000, sales_mtd: 189237884, target_mtd: 500000000, mtd_last_year: 205000000 },
     ],
     alerts: [
       { date, store, level: "danger", title: "Pencapaian Sales MTD -38% dibanding bulan lalu", message: "Perlu akselerasi untuk mencapai target bulan ini." },
