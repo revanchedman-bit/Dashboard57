@@ -1379,17 +1379,43 @@ function renderOverviewMetrics(summary) {
 function renderKpiCard(type, summary, target) {
   const cfg = FIELD_MAP[type];
   const isToday = state.mode === "today";
-  const actual = number(summary[isToday ? cfg.today : cfg.mtd]);
-  const targetValue = number(summary[isToday ? cfg.targetToday : cfg.targetMtd]);
-  const achievement = percentValue(summary[isToday ? cfg.achToday : cfg.achMtd], actual, targetValue);
-  const gap = isToday ? valueOrComputed(summary[cfg.gapToday], actual - targetValue) : actual - targetValue;
 
-  const alternateActual = number(summary[isToday ? cfg.mtd : cfg.today]);
-  const alternateTarget = number(summary[isToday ? cfg.targetMtd : cfg.targetToday]);
-  const alternateAchievement = percentValue(summary[isToday ? cfg.achMtd : cfg.achToday], alternateActual, alternateTarget);
+  // Pemetaan periode dibuat eksplisit agar target Hari Ini dan MTD tidak tertukar.
+  let actual;
+  let targetValue;
+  let achievement;
+  let gap;
+  let alternateActual;
+  let alternateTarget;
+  let alternateAchievement;
+  let periodLabel;
+  let alternateLabel;
+
+  if (isToday) {
+    actual = number(summary[cfg.today]);
+    targetValue = number(summary[cfg.targetToday]);
+    achievement = percentValue(summary[cfg.achToday], actual, targetValue);
+    gap = valueOrComputed(summary[cfg.gapToday], actual - targetValue);
+
+    alternateActual = number(summary[cfg.mtd]);
+    alternateTarget = number(summary[cfg.targetMtd]);
+    alternateAchievement = percentValue(summary[cfg.achMtd], alternateActual, alternateTarget);
+    periodLabel = "HARI INI";
+    alternateLabel = "MTD";
+  } else {
+    actual = number(summary[cfg.mtd]);
+    targetValue = number(summary[cfg.targetMtd]);
+    achievement = percentValue(summary[cfg.achMtd], actual, targetValue);
+    gap = actual - targetValue;
+
+    alternateActual = number(summary[cfg.today]);
+    alternateTarget = number(summary[cfg.targetToday]);
+    alternateAchievement = percentValue(summary[cfg.achToday], alternateActual, alternateTarget);
+    periodLabel = "MONTH TO DATE";
+    alternateLabel = "HARI INI";
+  }
+
   const growth = percentNumber(summary[cfg.growth]);
-  const periodLabel = isToday ? "HARI INI" : "MONTH TO DATE";
-  const alternateLabel = isToday ? "MTD" : "HARI INI";
 
   target.innerHTML = `
     <div class="kpi-main">
