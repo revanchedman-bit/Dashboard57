@@ -1474,7 +1474,7 @@ function renderTrend() {
   const pad = { left: 38, right: 32, top: 16, bottom: 28 };
   const innerW = width - pad.left - pad.right;
   const innerH = height - pad.top - pad.bottom;
-  const maxDay = Math.max(31, ...rows.map((r) => number(r.day)));
+  const maxDay = 31;
   const yMax = Math.max(100, Math.ceil(Math.max(...rows.flatMap((r) => [percentNumber(r.sales_pct), percentNumber(r.furnipro_pct), percentNumber(r.commercial_pct)])) / 20) * 20);
 
   const x = (day) => pad.left + ((day - 1) / (maxDay - 1)) * innerW;
