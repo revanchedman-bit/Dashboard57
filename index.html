@@ -2061,6 +2061,19 @@ function createSampleData() {
   };
 }
 
+function getTrendDay(row) {
+  const dayValue = number(row.day);
+
+  // Gunakan kolom day apabila nilainya benar, yaitu 1–31
+  if (dayValue >= 1 && dayValue <= 31) {
+    return dayValue;
+  }
+
+  // Jika kolom day salah, ambil tanggal dari kolom date
+  const normalizedDate = normalizeDate(row.date);
+  return normalizedDate ? Number(normalizedDate.slice(8, 10)) : 0;
+}    
+
   </script>
 </body>
 </html>
