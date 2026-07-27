@@ -1458,8 +1458,8 @@ function renderTrend() {
   const monthKey = state.selectedDate.slice(0, 7);
   const rows = state.data.trend
     .filter((row) => normalizeDate(row.date).startsWith(monthKey))
-    .sort((a, b) => number(a.day) - number(b.day));
-
+    .sort((a, b) => getTrendDay(a) - getTrendDay(b));
+  
   el.trendLegend.innerHTML = [
     ["Sales", COLORS.sales], ["FurniPro", COLORS.furnipro], ["Commercial Service", COLORS.commercial],
   ].map(([name, color]) => `<span class="legend-item"><i class="legend-line" style="background:${color}"></i>${name}</span>`).join("");
