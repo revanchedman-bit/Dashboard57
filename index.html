@@ -1728,7 +1728,7 @@ function renderTrendSummary() {
   const month = state.selectedDate.slice(0, 7);
   const rows = state.data.trend
     .filter((row) => normalizeDate(row.date).startsWith(month))
-    .sort((a, b) => number(a.day) - number(b.day));
+    .sort((a, b) => getTrendDay(a) - getTrendDay(b));
   const latest = rows.at(-1) || {};
   const metrics = [
     ["Sales", percentNumber(latest.sales_pct)],
