@@ -1737,7 +1737,7 @@ function renderTrendSummary() {
   ];
   const best = [...metrics].sort((a, b) => b[1] - a[1])[0] || ["-", 0];
   el.trendSummary.innerHTML = [
-    ["Hari Terakhir", rows.length ? `Hari ke-${number(latest.day)}` : "-", `${rows.length} titik data`],
+    ["Hari Terakhir", rows.length ? `Hari ke-${getTrendDay(latest)}` : "-", `${rows.length} titik data`],
     ["Sales MTD", formatPercent(metrics[0][1]), "Pencapaian terakhir"],
     ["FurniPro MTD", formatPercent(metrics[1][1]), "Pencapaian terakhir"],
     ["Performa Tertinggi", best[0], formatPercent(best[1])],
