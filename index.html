@@ -1479,7 +1479,7 @@ function renderTrend() {
 
   const x = (day) => pad.left + ((day - 1) / (maxDay - 1)) * innerW;
   const y = (value) => pad.top + innerH - (clamp(value, 0, yMax) / yMax) * innerH;
-  const line = (field) => rows.map((r) => `${x(number(r.day)).toFixed(1)},${y(percentNumber(r[field])).toFixed(1)}`).join(" ");
+  const line = (field) => rows.map((r) => `${x(getTrendDay(r)).toFixed(1)},${y(percentNumber(r[field])).toFixed(1)}`).join(" ");
   const yTicks = Array.from({ length: 6 }, (_, i) => Math.round((yMax / 5) * i));
   const xTicks = [1, 5, 9, 13, 17, 21, 25, 29, 31].filter((d) => d <= maxDay);
 
@@ -1496,9 +1496,9 @@ function renderTrend() {
       ${xTicks.map((tick) => `<text x="${x(tick)}" y="${height - 8}" text-anchor="middle" font-size="9" fill="#748096">${tick}</text>`).join("")}
       ${series.map((s) => `<polyline points="${line(s.field)}" fill="none" stroke="${s.color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`).join("")}
       ${series.map((s) => {
-        const value = percentNumber(last[s.field]);
-        return `<circle cx="${x(number(last.day))}" cy="${y(value)}" r="3.7" fill="${s.color}"/><text x="${x(number(last.day)) - 5}" y="${y(value) - 8}" text-anchor="end" font-size="10" font-weight="700" fill="${s.color}">${formatPercent(value)}</text>`;
-      }).join("")}
+  const value = percentNumber(last[s.field]);
+  return `<circle cx="${x(getTrendDay(last))}" cy="${y(value)}" r="3.7" fill="${s.color}"/><text x="${x(getTrendDay(last)) - 5}" y="${y(value) - 8}" text-anchor="end" font-size="10" font-weight="700" fill="${s.color}">${formatPercent(value)}</text>`;
+}).join("")}
     </svg>`;
 }
 
