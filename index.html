@@ -1620,13 +1620,21 @@ function renderSalesKpiTable(rows) {
   el.salesKpiTable.innerHTML = ranked.map((item, index) => `<tr>
     <td class="rank-cell">${rankBadge(index + 1)}</td>
     <td>${escapeHtml(item.row.name || "-")}</td>
-    ${SALES_KPI_CONFIG.map(({ key }) => renderSalesKpiCell(item.kpis[key])).join("")}
+    ${SALES_KPI_CONFIG.map(({ key }) => renderSalesKpiCell(item.kpis[key], key)).join("")}
     <td class="kpi-cell"><span class="salesperson-kpi-value">${formatCurrency(item.actual)}</span><span class="salesperson-kpi-target">Target ${formatCurrency(item.target)} · <b class="${targetClass(item.pct)}">${formatPercent(item.pct)}</b></span><div class="salesperson-kpi-progress"><span style="width:${clamp(item.pct, 0, 100)}%"></span></div></td>
   </tr>`).join("");
 }
 
-function renderSalesKpiCell(item) {
-  return `<td class="kpi-cell"><span class="salesperson-kpi-value">${formatCurrency(item.actual)}</span><span class="salesperson-kpi-target">Target ${formatCurrency(item.target)} · <b class="${targetClass(item.pct)}">${formatPercent(item.pct)}</b></span><div class="salesperson-kpi-progress"><span style="width:${clamp(item.pct, 0, 100)}%"></span></div></td>`;
+function renderSalesKpiCell(item, key) {
+  const isFp = key === "fp";
+  const actualValue = isFp ? `${formatNumber(item.actual)} Polis` : formatCurrency(item.actual);
+  const targetValue = isFp ? `Target ${formatNumber(item.target)} Polis` : `Target ${formatCurrency(item.target)}`;
+  
+  return `<td class="kpi-cell">
+    <span class="salesperson-kpi-value">${actualValue}</span>
+    <span class="salesperson-kpi-target">${targetValue} · <b class="${targetClass(item.pct)}">${formatPercent(item.pct)}</b></span>
+    <div class="salesperson-kpi-progress"><span style="width:${clamp(item.pct, 0, 100)}%"></span></div>
+  </td>`;
 }
 
 function renderSalesPersonSummary() {
