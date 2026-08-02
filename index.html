@@ -1607,10 +1607,15 @@ function getSalesKpi(row, key) {
 function renderSalesKpiTable(rows) {
   const ranked = [...rows].map((row) => {
     const kpis = Object.fromEntries(SALES_KPI_CONFIG.map(({ key }) => [key, getSalesKpi(row, key)]));
-    const actual = Object.values(kpis).reduce((sum, item) => sum + item.actual, 0);
-    const target = Object.values(kpis).reduce((sum, item) => sum + item.target, 0);
-    return { row, kpis, actual, target, pct: target ? actual / target * 100 : 0 };
-  }).sort((a, b) => b.actual - a.actual);
+    
+    const weightedPct = 
+      (kpis.furniture.pct * 0.35) +
+      (kpis.accessories.pct * 0.35) +
+      (kpis.fp.pct * 0.20) +
+      (kpis.comser.pct * 0.10);
+      
+    return { row, kpis, weightedPct };
+  }).sort((a, b) => b.weightedPct - a.weightedPct);
 
   if (!ranked.length) {
     el.salesKpiTable.innerHTML = `<tr><td colspan="7" class="empty-state">Belum ada data KPI sales person.</td></tr>`;
@@ -1621,7 +1626,11 @@ function renderSalesKpiTable(rows) {
     <td class="rank-cell">${rankBadge(index + 1)}</td>
     <td>${escapeHtml(item.row.name || "-")}</td>
     ${SALES_KPI_CONFIG.map(({ key }) => renderSalesKpiCell(item.kpis[key], key)).join("")}
-    <td class="kpi-cell"><span class="salesperson-kpi-value">${formatCurrency(item.actual)}</span><span class="salesperson-kpi-target">Target ${formatCurrency(item.target)} · <b class="${targetClass(item.pct)}">${formatPercent(item.pct)}</b></span><div class="salesperson-kpi-progress"><span style="width:${clamp(item.pct, 0, 100)}%"></span></div></td>
+    <td class="kpi-cell">
+      <span class="salesperson-kpi-value">${formatPercent(item.weightedPct)}</span>
+      <span class="salesperson-kpi-target">Skor Tertimbang · <b class="${targetClass(item.weightedPct)}">${formatPercent(item.weightedPct)}</b></span>
+      <div class="salesperson-kpi-progress"><span style="width:${clamp(item.weightedPct, 0, 100)}%"></span></div>
+    </td>
   </tr>`).join("");
 }
 
